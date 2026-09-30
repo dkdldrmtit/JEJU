@@ -154,7 +154,7 @@
         </div>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
         ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : ''}
-        ${day.open ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
+        ${day.open ? `<p class="empty-slot">${esc(day.open)}</p><div class="fb" data-fb-day="${day.date}"></div>` : ''}
         ${night
           ? `<p class="night">${ICON.moon}<span>숙박 · <b>${esc(night.name)}</b></span></p>`
           : `<p class="night">${ICON.plane}<span>${esc(day.nightNote || '집으로')}</span></p>`}
@@ -456,6 +456,11 @@
         <h1 class="page-title">가볼 곳 · 먹을 곳</h1>
         <p class="lede">${esc(T.ideasNote)}</p>
       </section>
+      <section class="block">
+        <h2 class="h">가족 의견</h2>
+        <p class="lede">하고 싶은 거, 먹고 싶은 거 아무거나 남겨주세요. 링크도 붙일 수 있어요.</p>
+        <div class="card fb fb-all" data-fb-day="all"></div>
+      </section>
       ${(T.ideaGroups || []).map((g) => `<section class="block">
         <h2 class="h">${esc(g.title)}</h2>
         <ul class="ideas">${g.items.map(ideaCard).join('')}</ul>
@@ -631,6 +636,137 @@
       </section>`;
   }
 
+  /* ---------- 가족 의견 (구글 시트에 저장) ---------- */
+  const FB = T.feedback || {};
+  const NAME_KEY = 'jeju2026.name';
+  let fbItems = null;
+  let fbOpen = null;
+  const fbDays = () => T.days.filter((d) => d.open).map((d) => d.date);
+  const savedName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } };
+  const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* 무시 */ } };
+
+  function ago(ts) {
+    const t = new Date(ts);
+    if (Number.isNaN(t.getTime())) return '';
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return '방금';
+    if (m < 60) return `${m}분 전`;
+    if (m < 60 * 24) return `${Math.round(m / 60)}시간 전`;
+    return `${t.getMonth() + 1}.${t.getDate()}`;
+  }
+  const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '링크'; } };
+
+  function fbItemHTML(it, showDay) {
+    const safeLink = /^https?:\/\//.test(it.link || '') ? it.link : '';
+    let aiBox = '';
+    if (it.ai) {
+      const al = it.aiLink || '';
+      aiBox = `<div class="fb-ai"><span class="fb-ai-tag">✦ AI가 찾아봤어요</span><p>${esc(it.ai)}</p>${
+        /^https?:\/\//.test(al) ? `<a class="fb-link" href="${esc(al)}" target="_blank" rel="noopener">자세히 · ${esc(hostOf(al))}</a>` : naverLink(al, true)}</div>`;
+    } else if (FB.aiOn) aiBox = '<p class="fb-ai-wait">✦ AI가 곧 찾아볼게요</p>';
+    return `<li class="fb-item">
+      <p class="fb-meta"><b>${esc(it.name || '누군가')}</b>${showDay && it.day ? ` · ${esc(`${dom(it.day)}일`)}` : ''} · ${esc(ago(it.ts))}</p>
+      <p class="fb-text">${esc(it.text)}</p>
+      ${safeLink ? `<a class="fb-link" href="${esc(safeLink)}" target="_blank" rel="noopener">링크 열기 · ${esc(hostOf(safeLink))}</a>` : ''}
+      ${aiBox}
+    </li>`;
+  }
+
+  function fbFormHTML(day) {
+    const me = savedName();
+    const uid = `fb-${day}`;
+    const daySelect = day === 'all'
+      ? `<label class="fb-label" for="${uid}-day">언제요?</label>
+         <select id="${uid}-day" name="day" class="fb-input"><option value="">아무 날이나</option>${T.days.map((d) => `<option value="${d.date}">${esc(mdw(d.date))}</option>`).join('')}</select>`
+      : '';
+    return `<form class="fb-form" data-day="${day}">
+      <p class="fb-label">누구예요?</p>
+      <div class="fb-names">${T.people.filter((p) => p.id !== 'taeo').map((p) => `<label><input type="radio" name="name" value="${esc(p.name)}"${me === p.name ? ' checked' : ''}><span>${esc(p.name)}</span></label>`).join('')}</div>
+      ${daySelect}
+      <label class="fb-label" for="${uid}-text">뭐 하고 싶어요?</label>
+      <textarea id="${uid}-text" name="text" class="fb-input" maxlength="500" rows="3" required placeholder="예) 카멜리아힐 가서 가족사진 찍고 싶어요"></textarea>
+      <label class="fb-label" for="${uid}-link">참고 링크 <small>(선택)</small></label>
+      <input id="${uid}-link" name="link" type="url" class="fb-input" placeholder="인스타 · 블로그 · 네이버 지도 주소">
+      <input name="website" class="fb-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="fb-actions"><button type="submit" class="btn primary">올리기</button><button type="button" class="btn" data-fb-cancel>취소</button></div>
+      <p class="fb-status" role="status"></p>
+    </form>`;
+  }
+
+  function fbBlockHTML(day) {
+    const list = (fbItems || []).filter((it) => day === 'all' || it.day === day);
+    const items = fbItems === null && FB.endpoint
+      ? '<p class="fb-empty">의견 불러오는 중…</p>'
+      : list.length
+        ? `<ul class="fb-list">${list.map((it) => fbItemHTML(it, day === 'all')).join('')}</ul>`
+        : `<p class="fb-empty">${day === 'all' ? '아직 의견이 없어요. 첫 의견을 남겨주세요!' : '이날 하고 싶은 게 있으면 남겨주세요.'}</p>`;
+    return `${items}${fbOpen === day ? fbFormHTML(day) : `<button type="button" class="fb-open" data-fb-open="${day}">＋ 의견 남기기</button>`}`;
+  }
+
+  function fillFeedback() {
+    view.querySelectorAll('.fb[data-fb-day]').forEach((el) => { el.innerHTML = fbBlockHTML(el.dataset.fbDay); });
+  }
+
+  async function loadFeedback() {
+    if (!FB.endpoint) return;
+    try {
+      const res = await fetch(`${FB.endpoint}?t=${Date.now()}`);
+      const data = await res.json();
+      fbItems = (data.items || []).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+    } catch (e) {
+      fbItems = fbItems || [];
+    }
+    fillFeedback();
+  }
+
+  view.addEventListener('click', (e) => {
+    const open = e.target.closest('[data-fb-open]');
+    if (open) {
+      fbOpen = open.dataset.fbOpen;
+      fillFeedback();
+      const ta = view.querySelector(`.fb-form[data-day="${fbOpen}"] textarea`);
+      if (ta) ta.focus();
+      return;
+    }
+    if (e.target.closest('[data-fb-cancel]')) { fbOpen = null; fillFeedback(); }
+  });
+
+  view.addEventListener('submit', async (e) => {
+    const form = e.target.closest('.fb-form');
+    if (!form) return;
+    e.preventDefault();
+    const fd = new FormData(form);
+    const status = form.querySelector('.fb-status');
+    const name = fd.get('name');
+    const text = String(fd.get('text') || '').trim();
+    const link = String(fd.get('link') || '').trim();
+    if (!name) { status.textContent = '이름을 골라주세요.'; return; }
+    if (!text) { status.textContent = '하고 싶은 걸 적어주세요.'; return; }
+    if (link && !/^https?:\/\//.test(link)) { status.textContent = '링크는 http 로 시작하는 주소만 돼요.'; return; }
+    saveName(name);
+    if (!FB.endpoint) { status.textContent = '아직 의견 창구가 연결 전이에요. 민석이 곧 열어둘게요!'; return; }
+    const day = form.dataset.day === 'all' ? String(fd.get('day') || '') : form.dataset.day;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    status.textContent = '올리는 중…';
+    try {
+      const res = await fetch(FB.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'add', name, day, text, link, website: fd.get('website') || '' }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'fail');
+      fbItems = [{ id: data.id, ts: new Date().toISOString(), name, day, text, link }].concat(fbItems || []);
+      fbOpen = null;
+      fillFeedback();
+      loadFeedback();
+    } catch (err) {
+      btn.disabled = false;
+      status.textContent = '올리지 못했어요. 인터넷 연결을 확인하고 다시 눌러주세요.';
+    }
+  });
+
   /* ---------- 사진 크게 보기 ---------- */
   const lb = document.createElement('div');
   lb.className = 'lightbox';
@@ -667,6 +803,7 @@
     });
     foot.textContent = `마지막 업데이트 ${md(T.updated)} · ${T.updatedBy}`;
     initMaps();
+    fillFeedback();
   }
 
   window.addEventListener('hashchange', () => {
@@ -689,4 +826,5 @@
 
   render();
   if (currentTab() === 'plan') scrollToToday();
+  loadFeedback();
 })();
