@@ -150,23 +150,27 @@
 
   /* ---------- 홈 ---------- */
   function heroHTML(st) {
+    const H = T.hero || {};
     let big;
     let small;
     if (st.phase === 'before') { big = `D-${st.dday}`; small = '출발까지'; }
     else if (st.phase === 'during') {
       big = st.index === 0 ? 'D-DAY' : `${st.index + 1}일차`;
-      small = st.index === 0 ? '드디어 출발' : `${dates.length}일 중`;
-    } else { big = '끝!'; small = '모두 수고했어요'; }
+      small = st.index === 0 ? '드디어 출발!' : `${dates.length}일 중`;
+    } else { big = '다녀왔어요'; small = '모두 수고했어요'; }
     const nights = dates.length - 1;
-    return `<section class="hero" aria-label="여행 요약">
-      ${ICON.mandarin}
-      <p class="hero-eyebrow">${esc(T.eyebrow)}</p>
-      <h1>${esc(T.shortTitle)}</h1>
-      <p class="hero-dates">${md(T.start)} ${wd(T.start)} – ${md(T.end)} ${wd(T.end)} <span>· ${nights}박 ${dates.length}일</span></p>
-      <div class="hero-row">
+    return `<section class="invite" aria-label="여행 초대">
+      <div class="inv-text">
+        <p class="inv-eyebrow">${esc(H.eyebrow || T.eyebrow)}</p>
+        <h1 class="inv-title">${esc(H.title || T.shortTitle)}</h1>
+        <p class="inv-dates">${md(T.start)}(${wd(T.start)}) – ${md(T.end)}(${wd(T.end)})</p>
         <p class="dday"><b>${esc(big)}</b><span>${esc(small)}</span></p>
-        <p class="hero-note">${esc(T.tagline)}<small>${esc(T.people.map((p) => p.name).join(' · '))}</small></p>
+        <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
       </div>
+      ${H.photo ? `<figure class="inv-photo">
+        <p class="inv-bubble">${esc(H.bubble || '')}</p>
+        <img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="430" height="561" fetchpriority="high">
+      </figure>` : ICON.mandarin}
     </section>`;
   }
 

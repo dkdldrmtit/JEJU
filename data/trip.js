@@ -8,7 +8,16 @@
 window.TRIP = {
   shortTitle: '제주 가족여행',
   eyebrow: '2026 가을 · 5박 6일',
-  tagline: '일곱 식구, 제주에서 만나요',
+  tagline: '일곱 식구가 제주에서 만나요',
+  /* 홈 맨 위 초대 카드 */
+  hero: {
+    eyebrow: '태오가 보내는 초대장',
+    title: '태오랑\n제주 여행',
+    note: '5박 6일, 일곱 식구가 제주에서 만나요',
+    bubble: '우리 같이 여행해요!',
+    photo: 'assets/photos/taeo.webp',
+    alt: '한복 입고 활짝 웃는 태오',
+  },
   start: '2026-10-11',
   end: '2026-10-16',
   updated: '2026-09-30',

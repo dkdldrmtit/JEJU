@@ -778,3 +778,72 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 .fb-form, .lightbox img { animation: pop .3s var(--ease) both; }
 .lightbox { animation: rise .25s var(--ease) both; }
 .dday b { display: inline-block; }
+
+/* =====================================================================
+   홈 맨 위 초대 카드 — 태오가 초대해요
+   ===================================================================== */
+:root {
+  --inv-bg: linear-gradient(165deg, #DCEFF4 0%, #EEF6F1 48%, #FFE9D6 100%);
+  --inv-ink: #173034;
+  --inv-muted: #4F6A6B;
+  --inv-dday: #E26B12;
+  --inv-bubble: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --inv-bg: linear-gradient(165deg, #173038 0%, #1B2B29 55%, #33261C 100%); --inv-ink: #EEF4F2; --inv-muted: #A7BDBA; --inv-dday: #F7A45A; --inv-bubble: #FFFFFF; }
+}
+:root[data-theme="dark"] { --inv-bg: linear-gradient(165deg, #173038 0%, #1B2B29 55%, #33261C 100%); --inv-ink: #EEF4F2; --inv-muted: #A7BDBA; --inv-dday: #F7A45A; --inv-bubble: #FFFFFF; }
+
+.invite {
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) 42%; align-items: end; gap: 4px;
+  min-height: 250px; padding: 22px 0 0 20px; margin-top: 4px;
+  border-radius: 26px; background: var(--inv-bg); color: var(--inv-ink);
+}
+.inv-text { position: relative; z-index: 1; padding-bottom: 22px; min-width: 0; }
+.inv-eyebrow { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; color: var(--inv-muted); }
+.inv-title {
+  margin-top: 6px; font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(2rem, 9vw, 2.6rem); line-height: 1.08; letter-spacing: -.01em; white-space: pre-line;
+}
+.inv-dates { margin-top: 10px; font-size: var(--fs-base); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.inv-dates span { font-weight: 500; color: var(--inv-muted); }
+.invite .dday { margin-top: 14px; gap: 8px; align-items: center; }
+.invite .dday b {
+  font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1;
+  color: #fff; background: var(--inv-dday); padding: 7px 12px 6px; border-radius: 12px;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--inv-dday) 35%, transparent);
+}
+.invite .dday span { color: var(--inv-muted); font-size: var(--fs-sm); font-weight: 600; }
+.inv-note { margin-top: 12px; font-size: var(--fs-sm); color: var(--inv-muted); }
+
+.inv-photo { position: relative; margin: 0; align-self: end; display: grid; justify-items: center; padding-top: 46px; }
+.inv-photo img {
+  display: block; width: 100%; max-width: 190px; height: auto; margin-bottom: -6px;
+  filter:
+    drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) drop-shadow(0 -2.5px 0 #fff)
+    drop-shadow(0 10px 18px rgb(23 48 52 / .18));
+  transform-origin: 50% 100%;
+}
+.inv-bubble {
+  position: absolute; z-index: 2; top: 0; right: 8px; transform: rotate(-6deg);
+  font-family: var(--font-display); font-size: .95rem; line-height: 1.2; color: #173034; white-space: nowrap;
+  background: var(--inv-bubble); padding: 8px 12px 7px; border-radius: 16px 16px 4px 16px;
+  box-shadow: 0 6px 16px rgb(23 48 52 / .14);
+}
+.inv-bubble::after {
+  content: ""; position: absolute; left: 22px; bottom: -6px; width: 13px; height: 13px; background: var(--inv-bubble);
+  transform: rotate(45deg); border-radius: 0 0 4px 0;
+}
+@media (max-width: 360px) {
+  .invite { grid-template-columns: minmax(0, 1fr) 40%; padding-left: 16px; }
+  .inv-bubble { font-size: .82rem; right: 2px; }
+}
+@media (min-width: 560px) { .invite { min-height: 280px; } }
+
+/* 등장: 사진이 쑥 올라오고, 말풍선이 톡 */
+@keyframes inv-up { from { opacity: 0; transform: translateY(24px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes inv-pop { 0% { opacity: 0; transform: rotate(-6deg) scale(.4); } 70% { opacity: 1; transform: rotate(-9deg) scale(1.06); } 100% { transform: rotate(-6deg) scale(1); } }
+@keyframes inv-sway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-1.6deg); } }
+.view-in .inv-photo img { animation: inv-up .7s var(--ease) .15s both, inv-sway 6s ease-in-out 1s infinite; }
+.view-in .inv-bubble { animation: inv-pop .55s var(--ease) .75s both; }
