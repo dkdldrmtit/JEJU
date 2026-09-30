@@ -61,7 +61,7 @@ window.TRIP = {
     {
       id: 'somerset',
       name: '서머셋 제주신화월드',
-      short: '서머셋 제주신화월드',
+      short: '서머셋',
       who: 'all',
       room: '방 3개 · 4박',
       checkIn: { date: '2026-10-12', time: '15:00' },
@@ -96,7 +96,7 @@ window.TRIP = {
     { icon: 'bed', title: '신라호텔 제주', meta: '10.11(일) 1박 · 민석 · 시윤 · 태오', status: 'ok', q: '제주신라호텔' },
     { icon: 'bed', title: '서머셋 제주신화월드', meta: '10.12(월) – 10.16(금) 4박 · 방 3개 · 7명', status: 'ok', q: '서머셋 제주신화월드' },
     { icon: 'car', title: '카니발 하이리무진 7인승', meta: '10.11(일) 인수 → 10.16(금) 반납 · 운전 민석', status: 'ok' },
-    { icon: 'meal', accent: true, title: '그랜드 조선 제주 · 아리아 뷔페 점심', meta: '7명 모두 · 13일(화) 또는 14일(수) 중 하루', status: 'plan', q: '그랜드조선 제주 아리아' },
+    { icon: 'meal', accent: true, title: '그랜드 조선 제주 · 아리아 뷔페 점심', meta: '10.13(화) 12:00 · 7명 모두 (태오 무료)', status: 'plan', q: '그랜드조선 제주 아리아' },
   ],
 
   todo: [
@@ -105,27 +105,21 @@ window.TRIP = {
     { text: '후발대 항공편 정리', note: '12일 ZE715 21:40 도착 · 15일 OZ8234 15:10 출발', done: true },
     { text: '민석 · 시윤 · 태오 항공편 정리', note: '11일 7C111 · 16일 7C118', done: true },
     { text: '제주항공 예약에 태오 유아 등록 확인', note: '예약 안내엔 \'민석 외 1명\'만 보여요', done: false },
-    { text: '아리아 뷔페 날짜 정하고 예약', note: '13일(화) 또는 14일(수) · 점심 12:00–14:30', done: false },
+    { text: '아리아 뷔페 점심 예약 (13일)', note: '10.13(화) 12:00 · 어른 6명 + 태오 (36개월 이하 무료)', done: false },
     { text: '서머셋 투숙 인원 확인', note: '어른 6명 + 아기 1명으로 등록돼 있는지', done: false },
     { text: '아기침대 요청 (신라 · 서머셋)', note: '미리 신청해야 하고 수량이 적어요', done: false },
     { text: '태오 카시트 준비', note: '렌터카 옵션 대여 또는 집에서 가져가기', done: false },
-    { text: '13 · 14일 일정 정하기', note: '가고 싶은 곳은 단톡방에', done: false },
+    { text: '13일 오후 · 14일 일정 정하기', note: '가고 싶은 곳은 단톡방에', done: false },
   ],
 
-  /* 날짜가 아직 안 정해진 일정 */
-  undated: [
-    {
-      title: '그랜드 조선 제주 · 아리아 뷔페 점심',
-      status: 'plan',
-      who: 'all',
-      note: '13일(화) 또는 14일(수) · 점심 12:00–14:30 · 예약 필요 · 신화월드에서 차로 15분 안팎',
-      q: '그랜드조선 제주 아리아',
-    },
-  ],
+  /* 날짜가 아직 안 정해진 일정 (있으면 일정 탭 위에 따로 보여요) */
+  undated: [],
 
   days: [
     {
       date: '2026-10-11',
+      brief: '10:35 도착 · 신라호텔에서만',
+      route: ['cju', 'shilla'],
       title: '먼저 출발 · 신라호텔에서만 하루',
       night: 'shilla',
       items: [
@@ -138,6 +132,8 @@ window.TRIP = {
     },
     {
       date: '2026-10-12',
+      brief: '15:00 서머셋 · 21:40 공항 마중',
+      route: ['shilla', 'somerset', 'cju', 'somerset'],
       title: '서머셋으로 이동 · 밤에 가족 합류',
       night: 'somerset',
       items: [
@@ -151,18 +147,28 @@ window.TRIP = {
     },
     {
       date: '2026-10-13',
-      title: '일곱 식구 첫날',
+      brief: '12:00 아리아 뷔페 · 오후 미정',
+      route: ['somerset', 'josun', 'somerset'],
+      title: '다 같이 아리아 뷔페',
       night: 'somerset',
-      open: '하루 일정 정하는 중이에요. 아리아 뷔페 점심이 이날 또는 14일에 들어가요.',
+      items: [
+        { time: '11:30', title: '숙소에서 그랜드 조선 제주로 출발', status: 'plan', note: '차로 약 15분' },
+        { time: '12:00', title: '아리아 뷔페 점심', status: 'plan', who: 'all', note: '본관 1층 · 점심 12:00–14:30 · 태오는 무료 (나이 증명 서류 지참)', place: '그랜드조선 제주 아리아' },
+      ],
+      open: '점심 먹고 오후 일정은 정하는 중이에요.',
     },
     {
       date: '2026-10-14',
+      brief: '일정 정하는 중',
+      route: [],
       title: '일곱 식구 둘째 날',
       night: 'somerset',
       open: '하루 일정 정하는 중이에요. 가고 싶은 곳은 단톡방에 말해주세요.',
     },
     {
       date: '2026-10-15',
+      brief: '13:20 숙소 출발 · 15:10 비행기',
+      route: ['somerset', 'cju', 'somerset'],
       title: '할아버지 · 할머니 · 선미 · 범준 먼저 출발',
       night: 'somerset',
       items: [
@@ -175,6 +181,8 @@ window.TRIP = {
     },
     {
       date: '2026-10-16',
+      brief: '09:40 체크아웃 · 12:20 비행기',
+      route: ['somerset', 'cju'],
       title: '집으로',
       nightNote: '민석 · 시윤 · 태오 집으로',
       items: [
@@ -338,9 +346,9 @@ window.TRIP = {
   },
 
   map: {
-    caption: '공항에서 신화월드까지 차로 약 40분 (33km).',
+    caption: '날짜를 누르면 그날 동선만 보여요.',
     note: '위치와 시간은 대략이에요. 길이 막히면 더 걸려요.',
-    alt: '제주 약도. 북쪽에 제주공항, 남서쪽에 신화월드(서머셋), 남쪽 해안에 중문(신라호텔·그랜드조선). 공항–신화월드 약 40분, 신화월드–중문 약 15분.',
+    alt: '제주 서쪽 약도. 북쪽에 제주공항, 남서쪽에 서머셋(신화월드), 남쪽 해안에 중문(신라호텔·그랜드조선).',
     /* 해안선 (경도, 위도) — 서쪽 끝에서 시계 방향 */
     coast: [
       [126.163, 33.300], [126.180, 33.345], [126.240, 33.395], [126.270, 33.415],
@@ -352,15 +360,22 @@ window.TRIP = {
       [126.250, 33.212], [126.200, 33.250],
     ],
     peak: { name: '한라산', at: [126.5292, 33.3617] },
-    points: [
-      { id: 'cju', kind: 'airport', lon: 126.4927, lat: 33.5066, label: ['제주공항'], dx: 10, dy: 4 },
-      { id: 'shinhwa', kind: 'base', lon: 126.3172, lat: 33.3057, label: ['신화월드', '서머셋'], dx: -10, dy: -3, anchor: 'end' },
-      { id: 'jungmun', kind: 'stay', lon: 126.4095, lat: 33.2480, label: ['중문', '신라호텔 · 그랜드조선'], dx: 12, dy: 16, seaSide: true },
-    ],
-    routes: [
-      { from: 'cju', to: 'shinhwa', label: '약 40분', labelAt: [96, 90] },
-      { from: 'shinhwa', to: 'jungmun', label: '약 15분', labelAt: [108, 146] },
-    ],
+    /* 지도에 찍는 곳. 일정의 route 는 여기 id 를 순서대로 적어요 */
+    places: {
+      cju: { name: '제주공항', lon: 126.4927, lat: 33.5066, kind: 'airport', dx: 10, dy: 4 },
+      somerset: { name: '서머셋', lon: 126.3172, lat: 33.3057, kind: 'base', dx: -10, dy: 4, anchor: 'end' },
+      shilla: { name: '신라호텔', lon: 126.4081, lat: 33.2475, kind: 'stay', group: 'jungmun' },
+      josun: { name: '그랜드조선', lon: 126.4110, lat: 33.2490, kind: 'stay', group: 'jungmun' },
+    },
+    /* 같은 자리에 붙어 있는 곳은 이름을 하나로 */
+    groups: { jungmun: { name: '중문', dx: 8, dy: 22 } },
+    /* 차로 걸리는 대략적인 시간 */
+    legs: {
+      'cju|shilla': '약 1시간',
+      'cju|somerset': '약 40분',
+      'shilla|somerset': '약 15분',
+      'josun|somerset': '약 15분',
+    },
   },
 
   about: [

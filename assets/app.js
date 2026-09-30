@@ -11,7 +11,6 @@
   const TABS = ['home', 'plan', 'ideas', 'pack', 'info'];
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const STATUS = { ok: '확정', plan: '예정', tbd: '미정', idea: '후보' };
-  const APPROX_HOUR = { 새벽: 5, 아침: 8, 오전: 10, 점심: 12, 오후: 15, 저녁: 19, 밤: 21 };
   const PACK_KEY = 'jeju2026.packing.v1';
 
   /* ---------- 작은 도구 ---------- */
@@ -36,19 +35,18 @@
     meal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8"/><path d="M11 3v8a2 2 0 0 1-2 2"/><path d="M17 21V3c-2 1.5-3 4-3 7s1 4 3 4"/></svg>',
     plane: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 13.5 3 11l1.5-1.5 7 1L16 6a2.1 2.1 0 0 1 3 3l-4.5 4.5 1 7L14 22l-2.5-7.5"/></svg>',
     moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
     mandarin: '<svg class="hero-mandarin" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="31" r="19" fill="var(--tangerine)"/><circle cx="20.5" cy="25" r="4.5" fill="var(--basalt-ink)" opacity=".2"/><path d="M27 13.5V9" stroke="var(--basalt-ink)" stroke-width="2.2" stroke-linecap="round"/><path d="M27.5 10.5c1.8-4.2 6.3-6.3 10.5-5.2-1.6 4.2-6.2 6.4-10.5 5.2z" fill="var(--sea)"/></svg>',
   };
 
   const pill = (s) => (s && STATUS[s] ? `<span class="pill ${s}">${STATUS[s]}</span>` : '');
 
-  function mapLinks(q, compact = false) {
+  /* 지도 링크는 네이버 지도 하나로 */
+  function naverLink(q, small = false) {
     if (!q) return '';
-    const e = encodeURIComponent(q);
-    return `<div class="maplinks">
-      <a href="https://map.naver.com/p/search/${e}" target="_blank" rel="noopener">${compact ? '네이버' : '네이버 지도'}</a>
-      <a class="kakao" href="https://map.kakao.com/link/search/${e}" target="_blank" rel="noopener">${compact ? '카카오' : '카카오맵'}</a>
-    </div>`;
+    return `<a class="naver${small ? ' small' : ''}" href="https://map.naver.com/p/search/${encodeURIComponent(q)}" target="_blank" rel="noopener">${ICON.pin}<span>네이버 지도</span></a>`;
   }
 
   function membersOf(who) {
@@ -61,17 +59,6 @@
     if (!who || who === 'all') return `${T.people.length}명 모두`;
     return membersOf(who).map((p) => p.name).join(' · ');
   }
-
-  /* 도착/출발 시각 → 0~24시. 시간이 없으면 '저녁' 같은 대략값, 그것도 없으면 기본값. */
-  function hourOf(point, fallback) {
-    if (point && point.time) {
-      const [h, m] = point.time.split(':').map(Number);
-      return { h: h + (m || 0) / 60, exact: true };
-    }
-    if (point && point.approx && APPROX_HOUR[point.approx] != null) return { h: APPROX_HOUR[point.approx], exact: false };
-    return { h: fallback, exact: false };
-  }
-  const pct = (iso, hour) => ((dayDiff(toDate(T.start), toDate(iso)) + hour / 24) / dates.length) * 100;
 
   function whenText(point, verb = '') {
     const parts = [mdw(point.date)];
@@ -94,34 +81,52 @@
   /* ---------- 일정 조각 ---------- */
   function itemHTML(it) {
     const hasTime = Boolean(it.time);
-    const time = it.time || it.when || '시간 미정';
-    return `<li class="item">
-      <span class="time${hasTime ? ' is-set' : ''}">${esc(time)}</span>
+    const status = it.status || 'ok';
+    const sub = [it.who ? whoText(it.who) : '', it.note || ''].filter(Boolean).join(' · ');
+    return `<li class="item s-${status}">
+      <span class="time${hasTime ? ' is-set' : ''}">${esc(it.time || it.when || '미정')}</span>
       <div class="what">
-        <p class="title">${esc(it.title)} ${pill(it.status)}</p>
-        ${it.who ? `<p class="note">${esc(whoText(it.who))}</p>` : ''}
-        ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
-        ${it.place ? `<div class="place">${mapLinks(it.place, true)}</div>` : ''}
+        <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}</p>
+        ${sub ? `<p class="note">${esc(sub)}</p>` : ''}
+        ${it.place ? naverLink(it.place, true) : ''}
       </div>
     </li>`;
   }
 
-  function presentChips(iso) {
+  /* 그날 제주에 있는 사람: 이름은 작게, 도착·출발만 강조 */
+  function dayWhoHTML(iso) {
     return T.groups.map((g) => {
       if (iso < g.arrive.date || iso > g.depart.date) return '';
       let tag = '';
-      if (iso === g.arrive.date) tag = g.arrive.approx ? `${g.arrive.approx} 도착` : '도착';
-      else if (iso === g.depart.date) tag = '출발';
-      const chips = membersOf(g.id).map((p) => `<li class="chip ${g.id}">${esc(p.name)}</li>`).join('');
-      return chips + (tag ? `<li class="chip-note">${esc(tag)}</li>` : '');
+      if (iso === g.arrive.date) tag = `${g.arrive.time || g.arrive.approx || ''} 도착`.trim();
+      else if (iso === g.depart.date) tag = `${g.depart.time || ''} 출발`.trim();
+      const names = membersOf(g.id).map((p) => p.name).join(' · ');
+      return `<span class="wg ${g.id}"><i></i>${esc(names)}${tag ? ` <em>${esc(tag)}</em>` : ''}</span>`;
     }).join('');
+  }
+
+  /* 그날 인원: 시작 → 끝 */
+  function headcount(iso) {
+    let start = 0;
+    let end = 0;
+    let most = 0;
+    T.groups.forEach((g) => {
+      const n = membersOf(g.id).length;
+      if (iso < g.arrive.date || iso > g.depart.date) return;
+      most += n;
+      if (g.arrive.date < iso) start += n;
+      if (g.depart.date > iso) end += n;
+    });
+    if (start && end && start !== end) return `${start}→${end}명`;
+    return `${most}명`;
   }
 
   function dayHTML(day, i, st) {
     const isToday = st.phase === 'during' && st.index === i;
     const night = day.night ? stays.get(day.night) : null;
     const items = day.items || [];
-    return `<article class="day${isToday ? ' is-today' : ''}" id="day-${day.date}">
+    const hasRoute = (day.route || []).length > 1;
+    return `<article class="day${isToday ? ' is-today' : ''}" id="day-${day.date}" style="--dc:var(--d${i + 1})">
       <div class="stub">
         <span class="stub-n">DAY ${i + 1}</span>
         <span class="stub-date">${md(day.date)}</span>
@@ -129,8 +134,11 @@
         ${isToday ? '<span class="stub-today">오늘</span>' : ''}
       </div>
       <div class="day-body">
-        <h3 class="day-title">${esc(day.title)}</h3>
-        <ul class="who day-who" aria-label="이날 제주에 있는 사람">${presentChips(day.date)}</ul>
+        <div class="day-head">
+          <h3 class="day-title">${esc(day.title)}</h3>
+          ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선</span></button>` : ''}
+        </div>
+        <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
         ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : ''}
         ${day.open ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
         ${night
@@ -162,71 +170,47 @@
     </section>`;
   }
 
+  /* 여행 중에만: 오늘 카드 */
   function nowHTML(st) {
-    if (st.phase === 'after') return '';
-    const i = st.phase === 'during' ? st.index : 0;
-    const day = T.days[i];
-    const label = st.phase === 'during' ? `오늘 · ${mdw(day.date)}` : `첫날 미리보기 · ${mdw(day.date)}`;
-    const items = (day.items || []).slice(0, 4);
+    if (st.phase !== 'during') return '';
+    const day = T.days[st.index];
+    const items = day.items || [];
     return `<section class="block">
       <div class="card now-card">
-        <p class="now-label">${esc(label)}</p>
+        <p class="now-label">오늘 · ${esc(mdw(day.date))}</p>
         <h3>${esc(day.title)}</h3>
         ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : `<p class="empty-slot">${esc(day.open || '아직 정하는 중이에요')}</p>`}
-        <a class="btn-link" href="#plan">전체 일정 보기</a>
       </div>
     </section>`;
   }
 
-  function timelineHTML(st) {
-    const head = dates.map((iso, i) => (
-      `<div class="${st.phase === 'during' && st.index === i ? 'is-today' : ''}"><b>${dom(iso)}</b><span>${wd(iso)}</span></div>`
-    )).join('');
-
-    const span = T.groups.map((g) => {
-      const a = hourOf(g.arrive, 12);
-      const d = hourOf(g.depart, 14);
-      return { g, a, d, left: pct(g.arrive.date, a.h), right: pct(g.depart.date, d.h) };
-    });
-
-    const rows = span.map(({ g, a, d, left, right }) => {
-      const cls = ['tl-bar', g.id, a.exact ? '' : 'fuzzy-start', d.exact ? '' : 'fuzzy-end'].filter(Boolean).join(' ');
-      return `<div class="tl-row">
-        <p class="tl-label">${esc(g.name)}</p>
-        <div class="tl-track"><span class="${cls}" style="left:${left.toFixed(2)}%;width:${(right - left).toFixed(2)}%"></span></div>
-        <p class="tl-caption"><span>${esc(whenText(g.arrive, '도착'))} → ${esc(whenText(g.depart, '출발'))}</span></p>
-      </div>`;
+  /* 6일 전체 일정표: 한 화면에 */
+  function overviewHTML(st) {
+    const rows = T.days.map((day, i) => {
+      const night = day.night ? stays.get(day.night) : null;
+      const isToday = st.phase === 'during' && st.index === i;
+      const dots = T.groups.map((g) => membersOf(g.id).map(() => (
+        `<i class="${g.id}${day.date < g.arrive.date || day.date > g.depart.date ? ' off' : ''}"></i>`
+      )).join('')).join('');
+      return `<li>
+        <a class="ov-row${isToday ? ' is-today' : ''}" href="#plan" data-goto="day-${day.date}" style="--dc:var(--d${i + 1})">
+          <span class="ov-date"><b>${dom(day.date)}</b><span>${wd(day.date)}</span></span>
+          <span class="ov-main">
+            <span class="ov-title">${esc(day.title)}</span>
+            <span class="ov-brief">${esc(day.brief || '')}</span>
+          </span>
+          <span class="ov-side">
+            <span class="ov-count">${headcount(day.date)}</span>
+            <span class="ov-dots" aria-hidden="true">${dots}</span>
+            <span class="ov-stay">${esc(night ? night.short : '집')}</span>
+          </span>
+        </a>
+      </li>`;
     }).join('');
-
-    const togetherLeft = Math.max(...span.map((s) => s.left));
-    const togetherRight = Math.min(...span.map((s) => s.right));
-
-    const stayBars = T.stays.map((s) => {
-      const l = pct(s.checkIn.date, hourOf(s.checkIn, 15).h);
-      const r = pct(s.checkOut.date, hourOf(s.checkOut, 11).h);
-      return `<span class="tl-stay" style="left:${l.toFixed(2)}%;width:${(r - l).toFixed(2)}%">${esc(s.short)}</span>`;
-    }).join('');
-
-    const lastGroupIn = span.reduce((m, s) => (s.left > m.left ? s : m), span[0]);
-    const firstGroupOut = span.reduce((m, s) => (s.right < m.right ? s : m), span[0]);
-
     return `<section class="block">
-      <h2 class="h">누가 언제 있어요</h2>
-      <div class="card">
-        <div class="tl" style="--cols:${dates.length}">
-          <div class="tl-head">${head}</div>
-          <div class="tl-body">
-            <div class="tl-cols" aria-hidden="true">${dates.map(() => '<span></span>').join('')}</div>
-            ${togetherRight > togetherLeft ? `<div class="tl-together" style="left:${togetherLeft.toFixed(2)}%;width:${(togetherRight - togetherLeft).toFixed(2)}%" aria-hidden="true"></div>` : ''}
-            ${rows}
-            <div class="tl-row">
-              <p class="tl-label">잠자는 곳</p>
-              <div class="tl-stays">${stayBars}</div>
-            </div>
-          </div>
-        </div>
-        <p class="tl-legend"><span><i></i>${T.people.length}명 모두 함께 · ${esc(whenText(lastGroupIn.g.arrive))}부터 ${esc(mdw(firstGroupOut.g.depart.date))}까지</span></p>
-      </div>
+      <div class="h-row"><h2 class="h">한눈에 보는 6일</h2><span class="count">누르면 자세히</span></div>
+      <ol class="card ov">${rows}</ol>
+      <p class="ov-legend"><span><i class="a"></i>${esc(T.groups[0].name)}</span><span><i class="b"></i>${esc(T.groups[1].name)}</span></p>
     </section>`;
   }
 
@@ -236,7 +220,7 @@
       <div>
         <h3>${esc(b.title)} ${pill(b.status)}</h3>
         <p class="meta">${esc(b.meta)}</p>
-        ${b.q ? mapLinks(b.q) : ''}
+        ${b.q ? naverLink(b.q) : ''}
       </div>
     </li>`).join('');
     return `<section class="block">
@@ -258,20 +242,12 @@
     </section>`;
   }
 
-  /* 제주 섬 약도: 해안선 좌표(경도·위도)를 부드러운 곡선으로 잇고, 주요 지점만 찍는다. */
-  function mapHTML() {
-    const M = T.map;
-    const S = 4.25; // 1km당 px
-    const KX = 93 * S; // 위도 33.4° 부근 경도 1°≈93km
-    const KY = 111 * S;
-    const LON0 = 126.12;
-    const LAT0 = 33.6;
-    const W = 340;
-    const H = 205;
-    const P = ([lon, lat]) => [(lon - LON0) * KX, (LAT0 - lat) * KY];
-    const f = (n) => n.toFixed(1);
+  /* ---------- 동선 지도: 날짜별 · 전체 ---------- */
+  const mapSel = { home: 'all', plan: 'all' };
 
-    const pts = M.coast.map(P);
+  function islandPath(P) {
+    const f = (n) => n.toFixed(1);
+    const pts = T.map.coast.map(P);
     let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
     for (let i = 0; i < pts.length; i += 1) {
       const p0 = pts[(i - 1 + pts.length) % pts.length];
@@ -280,47 +256,132 @@
       const p3 = pts[(i + 2) % pts.length];
       d += `C${f(p1[0] + (p2[0] - p0[0]) / 6)},${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)},${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])},${f(p2[1])}`;
     }
-    d += 'Z';
+    return `${d}Z`;
+  }
 
-    const byId = new Map(M.points.map((p) => [p.id, { ...p, xy: P([p.lon, p.lat]) }]));
+  const legKey = (a, b) => [a, b].sort().join('|');
+  const placeName = (id) => T.map.places[id].name;
 
-    const routes = M.routes.map((r) => {
-      const a = byId.get(r.from).xy;
-      const b = byId.get(r.to).xy;
-      const mx = (a[0] + b[0]) / 2;
-      const my = (a[1] + b[1]) / 2;
-      const [lx, ly] = r.labelAt || [mx, my];
-      return `<path class="map-route" d="M${f(a[0])},${f(a[1])} L${f(b[0])},${f(b[1])}"/>
-        <text class="map-route-label" x="${f(lx)}" y="${f(ly)}" text-anchor="middle">${esc(r.label)}</text>`;
-    }).join('');
+  function routeSVG(sel) {
+    const M = T.map;
+    // 제주 서쪽 절반을 확대 (공항 · 중문 · 신화월드가 다 들어오게)
+    const S = 6.3; // 1km당 px
+    const LON0 = 126.12;
+    const LAT0 = 33.58;
+    const W = 340;
+    const H = 287;
+    const P = ([lon, lat]) => [(lon - LON0) * 93 * S, (LAT0 - lat) * 111 * S];
+    const f = (n) => n.toFixed(1);
+    const xy = (id) => P([M.places[id].lon, M.places[id].lat]);
+
+    const dayIdx = sel === 'all' ? T.days.map((_, i) => i) : [Number(sel)];
+    const pairUse = {};
+    const used = new Set();
+    let paths = '';
+    let labels = '';
+
+    dayIdx.forEach((i) => {
+      const r = T.days[i].route || [];
+      const color = `var(--d${i + 1})`;
+      const labeled = new Set();
+      r.forEach((id) => used.add(id));
+      for (let k = 0; k < r.length - 1; k += 1) {
+        const a = xy(r[k]);
+        const b = xy(r[k + 1]);
+        const key = legKey(r[k], r[k + 1]);
+        const n = pairUse[key] || 0;
+        pairUse[key] = n + 1;
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len;
+        const ny = dx / len;
+        const off = Math.min(10 + n * 8, len * 0.45);
+        const c = [(a[0] + b[0]) / 2 + nx * off, (a[1] + b[1]) / 2 + ny * off];
+        const m = [0.25 * a[0] + 0.5 * c[0] + 0.25 * b[0], 0.25 * a[1] + 0.5 * c[1] + 0.25 * b[1]];
+        const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        paths += `<path class="rt${sel === 'all' ? ' thin' : ''}" d="M${f(a[0])},${f(a[1])} Q${f(c[0])},${f(c[1])} ${f(b[0])},${f(b[1])}" style="stroke:${color}"/>
+          <path d="M-5,-4.5 L5,0 L-5,4.5Z" transform="translate(${f(m[0])},${f(m[1])}) rotate(${f(deg)})" style="fill:${color}"/>`;
+        if (sel !== 'all' && M.legs[key] && !labeled.has(key)) {
+          labeled.add(key);
+          labels += `<text class="rt-label" x="${f(m[0] + nx * 22)}" y="${f(m[1] + ny * 22 + 4)}" text-anchor="middle">${esc(M.legs[key])}</text>`;
+        }
+      }
+    });
+    if (!used.size) used.add('somerset');
+
+    // 점과 이름 (붙어 있는 곳은 이름 하나로)
+    const groupsShown = {};
+    [...used].forEach((id) => {
+      const g = M.places[id].group;
+      if (g) (groupsShown[g] = groupsShown[g] || []).push(id);
+    });
+    let dots = '';
+    [...used].forEach((id) => {
+      const pl = M.places[id];
+      const [x, y] = xy(id);
+      dots += `<circle class="map-dot ${pl.kind}" cx="${f(x)}" cy="${f(y)}" r="6"/>`;
+      if (!pl.group) {
+        dots += `<text class="map-label" x="${f(x + pl.dx)}" y="${f(y + pl.dy)}" text-anchor="${pl.anchor || 'start'}">${esc(pl.name)}</text>`;
+      }
+    });
+    Object.entries(groupsShown).forEach(([g, ids]) => {
+      const G = M.groups[g];
+      const [x, y] = xy(ids[0]);
+      const name = ids.length > 1 ? `${G.name} (${ids.map(placeName).join(' · ')})` : `${G.name} ${placeName(ids[0])}`;
+      dots += `<text class="map-label sea-side" x="${f(x + G.dx)}" y="${f(y + G.dy)}">${esc(name)}</text>`;
+    });
 
     const peak = P(M.peak.at);
-    const dots = [...byId.values()].map((p) => {
-      const [x, y] = p.xy;
-      const lines = p.label.map((t, i) => `<tspan x="${f(x + p.dx)}" dy="${i === 0 ? 0 : 14}">${esc(t)}</tspan>`).join('');
-      return `<circle class="map-dot ${p.kind}" cx="${f(x)}" cy="${f(y)}" r="6"/>
-        <text class="map-label${p.seaSide ? ' sea-side' : ''}" x="${f(x + p.dx)}" y="${f(y + p.dy)}" text-anchor="${p.anchor || 'start'}">${lines}</text>`;
-    }).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(M.alt)}">
+      <path class="map-island" d="${islandPath(P)}"/>
+      <path class="map-peak" d="M${f(peak[0] - 7)},${f(peak[1] + 5)} L${f(peak[0])},${f(peak[1] - 6)} L${f(peak[0] + 7)},${f(peak[1] + 5)}Z"/>
+      <text class="map-peak-label" x="${f(peak[0] + 10)}" y="${f(peak[1] + 4)}">${esc(M.peak.name)}</text>
+      ${paths}${labels}${dots}
+    </svg>`;
+  }
 
-    return `<section class="block">
-      <h2 class="h">우리 동선</h2>
-      <p class="lede">${esc(M.caption)}</p>
-      <figure class="card map-card" style="margin:0">
-        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(M.alt)}">
-          <path class="map-island" d="${d}"/>
-          <path class="map-peak" d="M${f(peak[0] - 7)},${f(peak[1] + 5)} L${f(peak[0])},${f(peak[1] - 6)} L${f(peak[0] + 7)},${f(peak[1] + 5)}Z"/>
-          <text class="map-peak-label" x="${f(peak[0] + 10)}" y="${f(peak[1] + 4)}">${esc(M.peak.name)}</text>
-          ${routes}
-          ${dots}
-        </svg>
-        <figcaption class="map-note">${esc(M.note)}</figcaption>
-      </figure>
+  function routeListHTML(sel) {
+    if (sel === 'all') {
+      return `<ol class="rt-list">${T.days.map((d, i) => {
+        const r = d.route || [];
+        return `<li style="--dc:var(--d${i + 1})"><i></i><b>${dom(d.date)}일</b><span>${r.length > 1 ? esc(r.map(placeName).join(' → ')) : '아직 정하는 중'}</span></li>`;
+      }).join('')}</ol>`;
+    }
+    const i = Number(sel);
+    const d = T.days[i];
+    const r = d.route || [];
+    if (r.length < 2) return `<p class="rt-empty">${esc(mdw(d.date))}은 아직 동선이 없어요. 후보 탭에서 골라봐요.</p>`;
+    const legs = [];
+    for (let k = 0; k < r.length - 1; k += 1) {
+      const t = T.map.legs[legKey(r[k], r[k + 1])];
+      legs.push(`<li style="--dc:var(--d${i + 1})"><i></i><span>${esc(placeName(r[k]))} → ${esc(placeName(r[k + 1]))}</span>${t ? `<em>${esc(t)}</em>` : ''}</li>`);
+    }
+    return `<ol class="rt-list legs">${legs.join('')}</ol>`;
+  }
+
+  function routeMapInner(key) {
+    const sel = mapSel[key];
+    const chips = [`<button type="button" class="mchip" data-map-key="${key}" data-map-day="all" aria-pressed="${sel === 'all'}">전체</button>`]
+      .concat(T.days.map((d, i) => `<button type="button" class="mchip" data-map-key="${key}" data-map-day="${i}" aria-pressed="${String(sel) === String(i)}" style="--dc:var(--d${i + 1})"><i></i>${dom(d.date)}일</button>`))
+      .join('');
+    return `<div class="mchips" role="group" aria-label="날짜 고르기">${chips}</div>
+      <div class="map-card">${routeSVG(sel)}</div>
+      ${routeListHTML(sel)}
+      <p class="map-note">${esc(T.map.note)}</p>`;
+  }
+
+  function routeMapHTML(key, title) {
+    return `<section class="block" id="map-${key}">
+      <h2 class="h">${esc(title)}</h2>
+      <p class="lede">${esc(T.map.caption)}</p>
+      <div class="card route-map" data-map="${key}">${routeMapInner(key)}</div>
     </section>`;
   }
 
   function renderHome() {
     const st = tripState();
-    return heroHTML(st) + nowHTML(st) + timelineHTML(st) + bookingsHTML() + todoHTML() + mapHTML();
+    return heroHTML(st) + nowHTML(st) + overviewHTML(st) + routeMapHTML('home', '동선 지도') + bookingsHTML() + todoHTML();
   }
 
   /* ---------- 일정 ---------- */
@@ -329,14 +390,15 @@
     const undated = T.undated.map((u) => `<li class="card undated">
       <h3>${esc(u.title)} ${pill(u.status)}</h3>
       <p class="note">${esc(whoText(u.who))}${u.note ? ` · ${esc(u.note)}` : ''}</p>
-      ${mapLinks(u.q)}
+      ${naverLink(u.q)}
     </li>`).join('');
 
     return `<section class="block">
         <h1 class="page-title">일정</h1>
         <p class="lede">정해진 것과 아직 정할 것을 나눠 적었어요. 바뀌면 바로 고쳐둘게요.</p>
-        <p class="legend"><span class="pill ok">확정</span> 예약·결정 끝 <span class="pill plan">예정</span> 하기로 함 <span class="pill tbd">미정</span> 시간·내용 정하는 중</p>
+        <p class="legend"><span class="lg s-ok"><i></i>확정</span><span class="lg s-plan"><i></i>예정</span><span class="lg s-tbd"><i></i>미정 · 정하는 중</span></p>
       </section>
+      ${routeMapHTML('plan', '동선 지도')}
       ${undated ? `<section class="block">
         <h2 class="h">날짜만 정하면 돼요</h2>
         <ul class="stack">${undated}</ul>
@@ -354,7 +416,7 @@
       <h3>${esc(x.name)}</h3>
       <p>${esc(x.desc)}</p>
       <div class="tags">${(x.tags || []).map((t) => `<span class="tag ${t.kind || ''}">${esc(t.text)}</span>`).join('')}</div>
-      ${mapLinks(x.q || x.name)}
+      ${naverLink(x.q || x.name)}
     </li>`;
     return `<section class="block">
         <h1 class="page-title">가볼 곳 · 먹을 곳</h1>
@@ -423,6 +485,29 @@
     savePack(packState);
     refreshPackCounts();
   });
+  let pendingGoto = null;
+  view.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-map-day]');
+    if (chip) {
+      const key = chip.dataset.mapKey;
+      mapSel[key] = chip.dataset.mapDay;
+      const box = view.querySelector(`.route-map[data-map="${key}"]`);
+      if (box) box.innerHTML = routeMapInner(key);
+      return;
+    }
+    const show = e.target.closest('[data-show-day]');
+    if (show) {
+      mapSel.plan = show.dataset.showDay;
+      const box = view.querySelector('.route-map[data-map="plan"]');
+      if (box) {
+        box.innerHTML = routeMapInner('plan');
+        document.getElementById('map-plan').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+      return;
+    }
+    const go = e.target.closest('[data-goto]');
+    if (go) pendingGoto = go.dataset.goto;
+  });
   view.addEventListener('click', (e) => {
     const btn = e.target.closest('#pack-reset');
     if (!btn) return;
@@ -463,7 +548,7 @@
         ${s.address ? `<dt>주소</dt><dd>${esc(s.address)}</dd>` : ''}
       </dl>
       ${s.notes && s.notes.length ? `<ul class="bullets" style="margin-top:12px">${s.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
-      ${mapLinks(s.q)}
+      ${naverLink(s.q)}
     </li>`).join('');
 
     const C = T.car;
@@ -496,7 +581,7 @@
         <p>${esc(h.desc)}</p>
         ${h.tel ? `<p>대표번호 <a class="tel" href="tel:${esc(h.tel.replace(/-/g, ''))}">${esc(h.tel)}</a></p>` : ''}
         ${h.address ? `<p>${esc(h.address)}</p>` : ''}
-        ${mapLinks(h.q || h.name)}
+        ${naverLink(h.q || h.name)}
       </li>`).join('')}</ul>
       ${E.note ? `<p class="tip">${esc(E.note)}</p>` : ''}
     </div>`;
@@ -536,7 +621,11 @@
     if (!TABS.includes(location.hash.replace('#', ''))) return; // '#view' 같은 본문 이동 링크는 탭을 바꾸지 않음
     render();
     window.scrollTo(0, 0);
-    if (currentTab() === 'plan') scrollToToday();
+    if (pendingGoto) {
+      const el = document.getElementById(pendingGoto);
+      pendingGoto = null;
+      if (el) el.scrollIntoView({ block: 'start' });
+    } else if (currentTab() === 'plan') scrollToToday();
   });
 
   function scrollToToday() {
