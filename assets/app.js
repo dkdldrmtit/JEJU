@@ -51,6 +51,9 @@
   };
   const kindIcon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIND_ICON[k] || ''}</svg>`;
 
+  /* 등록된 사진만 쓴다 (없으면 조용히 건너뜀) */
+  const photoOf = (key) => (key && T.photos && T.photos[key]) || null;
+
   const pill = (s) => (s && STATUS[s] ? `<span class="pill ${s}">${STATUS[s]}</span>` : '');
 
   /* 지도 링크는 네이버 지도 하나로 */
@@ -98,6 +101,7 @@
       <div class="what">
         <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}</p>
         ${sub ? `<p class="note">${esc(sub)}</p>` : ''}
+        ${photoOf(it.photo) ? `<figure class="item-photo"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
         ${it.place ? naverLink(it.place, true) : ''}
       </div>
     </li>`;
@@ -207,10 +211,11 @@
     const cols = T.days.map((day, i) => {
       const isToday = st.phase === 'during' && st.index === i;
       const weekend = [0, 6].includes(toDate(day.date).getDay());
-      const blocks = (day.blocks || []).map(([a, b, label, kind, tbd]) => {
+      const blocks = (day.blocks || []).map(([a, b, label, kind, tbd, pk]) => {
         const len = toH(b) - toH(a);
-        const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : ''].filter(Boolean).join(' ');
-        return `<span class="${cls}" style="top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)" title="${esc(`${a}–${b} ${label}`)}">${len >= 1.5 && !tbd ? kindIcon(kind) : ''}<b>${esc(label)}</b>${len >= 1.8 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}</span>`;
+        const ph = len >= 1.5 ? photoOf(pk) : null;
+        const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : '', ph ? 'has-photo' : ''].filter(Boolean).join(' ');
+        return `<span class="${cls}" style="top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)${ph ? `;--ph:url('${esc(ph.src)}')` : ''}" title="${esc(`${a}–${b} ${label}`)}">${len >= 1.5 && !tbd ? kindIcon(kind) : ''}<b>${esc(label)}</b>${len >= 1.8 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}</span>`;
       }).join('');
       let now = '';
       if (isToday) {
