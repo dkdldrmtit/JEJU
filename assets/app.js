@@ -192,14 +192,15 @@
     const span = P.to - P.from;
     const at = (h) => (((h - P.from) / span) * 100).toFixed(2);
     const ticks = [];
-    for (let h = P.from; h <= P.to; h += 1) ticks.push(h);
+    for (let h = P.from; h <= P.to; h += 2) ticks.push(h);
 
     const cols = T.days.map((day, i) => {
       const isToday = st.phase === 'during' && st.index === i;
+      const weekend = [0, 6].includes(toDate(day.date).getDay());
       const blocks = (day.blocks || []).map(([a, b, label, kind, tbd]) => {
         const len = toH(b) - toH(a);
         const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : ''].filter(Boolean).join(' ');
-        return `<span class="${cls}" style="top:${at(toH(a))}%;height:${(((toH(b) - toH(a)) / span) * 100).toFixed(2)}%" title="${esc(`${a}–${b} ${label}`)}">${esc(label)}</span>`;
+        return `<span class="${cls}" style="top:${at(toH(a))}%;height:${((len / span) * 100).toFixed(2)}%" title="${esc(`${a}–${b} ${label}`)}">${len >= 1.5 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}<b>${esc(label)}</b></span>`;
       }).join('');
       let now = '';
       if (isToday) {
@@ -207,28 +208,27 @@
         const h = d.getHours() + d.getMinutes() / 60;
         if (h >= P.from && h <= P.to) now = `<span class="pl-now" style="top:${at(h)}%"></span>`;
       }
-      const night = day.night ? stays.get(day.night).short : '집으로';
-      return `<a class="pl-col${isToday ? ' is-today' : ''}" href="#plan" data-goto="day-${day.date}" style="--dc:var(--d${i + 1})" aria-label="${esc(`${mdw(day.date)} ${day.title}`)}">
-        <span class="pl-head"><b>${dom(day.date)}</b><span>${wd(day.date)}</span><em>${headcount(day.date)}</em></span>
+      const night = day.night ? stays.get(day.night).short : '집';
+      return `<a class="pl-col${isToday ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}" href="#plan" data-goto="day-${day.date}" aria-label="${esc(`${mdw(day.date)} ${day.title}`)}">
+        <span class="pl-head"><span class="pl-wd">${wd(day.date)}</span><b>${dom(day.date)}</b><em>${headcount(day.date)}</em></span>
         <span class="pl-body">${blocks}${now}</span>
         <span class="pl-night">${esc(night)}</span>
       </a>`;
     }).join('');
 
-    const legend = Object.entries(P.kinds).map(([k, name]) => `<span><i class="k-${k}"></i>${esc(name)}</span>`).join('');
+    const legend = Object.entries(P.kinds).map(([k, name]) => `<span class="k-${k}"><i></i>${esc(name)}</span>`).join('');
     return `<section class="block">
-      <div class="h-row"><h2 class="h">우리의 제주 시간표</h2><span class="count">칸을 누르면 자세히</span></div>
+      <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">날짜를 누르면 자세히</span></div>
       <div class="card planner-card">
-        ${ICON.mandarin.replace('hero-mandarin', 'pl-sticker')}
         <div class="planner" style="--hours:${span}">
           <div class="pl-axis" aria-hidden="true">
             <span class="pl-head"></span>
-            <span class="pl-body">${ticks.map((h) => `<i style="top:${at(h)}%">${h}</i>`).join('')}</span>
+            <span class="pl-body">${ticks.map((h) => `<i style="top:${at(h)}%">${String(h).padStart(2, '0')}</i>`).join('')}</span>
             <span class="pl-night"></span>
           </div>
           ${cols}
         </div>
-        <p class="pl-legend">${legend}<span><i class="tbd"></i>미정</span></p>
+        <p class="pl-legend">${legend}<span class="tbd"><i></i>미정</span></p>
       </div>
     </section>`;
   }
