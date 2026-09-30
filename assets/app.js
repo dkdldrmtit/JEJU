@@ -337,8 +337,13 @@
       kakaoReady = new Promise((resolve) => {
         const sc = document.createElement('script');
         sc.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(T.map.kakaoKey)}&autoload=false`;
-        sc.onload = () => window.kakao.maps.load(() => resolve(true));
-        sc.onerror = () => resolve(false);
+        // 도메인 미등록 등으로 키가 거부되면 SDK 대신 오류 JSON 이 와서 kakao 가 안 생김 → OpenStreetMap 으로
+        const fail = setTimeout(() => resolve(false), 8000);
+        sc.onload = () => {
+          if (window.kakao && window.kakao.maps && window.kakao.maps.load) window.kakao.maps.load(() => { clearTimeout(fail); resolve(true); });
+          else { clearTimeout(fail); resolve(false); }
+        };
+        sc.onerror = () => { clearTimeout(fail); resolve(false); };
         document.head.appendChild(sc);
       });
     }

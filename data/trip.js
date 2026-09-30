@@ -388,7 +388,7 @@ window.TRIP = {
   /* 동선 지도: 장소 좌표 (OpenStreetMap 기준). 경로는 tools/build-routes.js 로 data/routes.js 에 만들어요 */
   map: {
     /* 카카오맵 JavaScript 키 (developers.kakao.com, 사이트 도메인 https://dkdldrmtit.github.io 등록). 비어 있으면 OpenStreetMap */
-    kakaoKey: '',
+    kakaoKey: '64fc8140dbfb12924f6c40dea633a3af',
     caption: '날짜를 누르면 그날 동선이 실제 도로 위에 시간 순서대로 그려져요.',
     note: '이동 시간은 막히지 않을 때 기준이에요. 넉넉히 잡아주세요.',
     places: {
