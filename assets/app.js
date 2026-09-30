@@ -276,141 +276,141 @@
     </section>`;
   }
 
-  /* ---------- 동선 지도: 날짜별 · 전체 ---------- */
+  /* ---------- 동선 지도: 실제 도로 위에 시간 순서대로 (Leaflet + OpenStreetMap) ---------- */
   const mapSel = { home: 'all', plan: 'all' };
+  const maps = {}; // key → { map, layer }
+  const ROUTES = window.ROUTES || {};
+  const placeOf = (id) => T.map.places[id];
+  const legOf = (a, b) => ROUTES[`${a}>${b}`];
+  const dayColor = (i) => getComputedStyle(document.documentElement).getPropertyValue(`--d${i + 1}`).trim() || '#0E7A73';
+  const roundMin = (m) => Math.max(5, Math.ceil(m / 5) * 5);
+  const isDark = () => {
+    const t = document.documentElement.dataset.theme;
+    if (t) return t === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  };
 
-  function islandPath(P) {
-    const f = (n) => n.toFixed(1);
-    const pts = T.map.coast.map(P);
-    let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
-    for (let i = 0; i < pts.length; i += 1) {
-      const p0 = pts[(i - 1 + pts.length) % pts.length];
-      const p1 = pts[i];
-      const p2 = pts[(i + 1) % pts.length];
-      const p3 = pts[(i + 2) % pts.length];
-      d += `C${f(p1[0] + (p2[0] - p0[0]) / 6)},${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)},${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])},${f(p2[1])}`;
-    }
-    return `${d}Z`;
-  }
-
-  const legKey = (a, b) => [a, b].sort().join('|');
-  const placeName = (id) => T.map.places[id].name;
-
-  function routeSVG(sel) {
-    const M = T.map;
-    // 제주 서쪽 절반을 확대 (공항 · 중문 · 신화월드가 다 들어오게)
-    const S = 6.3; // 1km당 px
-    const LON0 = 126.12;
-    const LAT0 = 33.58;
-    const W = 340;
-    const H = 287;
-    const P = ([lon, lat]) => [(lon - LON0) * 93 * S, (LAT0 - lat) * 111 * S];
-    const f = (n) => n.toFixed(1);
-    const xy = (id) => P([M.places[id].lon, M.places[id].lat]);
-
-    const dayIdx = sel === 'all' ? T.days.map((_, i) => i) : [Number(sel)];
-    const pairUse = {};
-    const used = new Set();
-    let paths = '';
-    let labels = '';
-
-    dayIdx.forEach((i) => {
-      const r = T.days[i].route || [];
-      const color = `var(--d${i + 1})`;
-      const labeled = new Set();
-      r.forEach((id) => used.add(id));
-      for (let k = 0; k < r.length - 1; k += 1) {
-        const a = xy(r[k]);
-        const b = xy(r[k + 1]);
-        const key = legKey(r[k], r[k + 1]);
-        const n = pairUse[key] || 0;
-        pairUse[key] = n + 1;
-        const dx = b[0] - a[0];
-        const dy = b[1] - a[1];
-        const len = Math.hypot(dx, dy) || 1;
-        const nx = -dy / len;
-        const ny = dx / len;
-        const off = Math.min(10 + n * 8, len * 0.45);
-        const c = [(a[0] + b[0]) / 2 + nx * off, (a[1] + b[1]) / 2 + ny * off];
-        const m = [0.25 * a[0] + 0.5 * c[0] + 0.25 * b[0], 0.25 * a[1] + 0.5 * c[1] + 0.25 * b[1]];
-        const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-        paths += `<path class="rt${sel === 'all' ? ' thin' : ''}" d="M${f(a[0])},${f(a[1])} Q${f(c[0])},${f(c[1])} ${f(b[0])},${f(b[1])}" style="stroke:${color}"/>
-          <path d="M-5,-4.5 L5,0 L-5,4.5Z" transform="translate(${f(m[0])},${f(m[1])}) rotate(${f(deg)})" style="fill:${color}"/>`;
-        if (sel !== 'all' && M.legs[key] && !labeled.has(key)) {
-          labeled.add(key);
-          labels += `<text class="rt-label" x="${f(m[0] + nx * 22)}" y="${f(m[1] + ny * 22 + 4)}" text-anchor="middle">${esc(M.legs[key])}</text>`;
-        }
-      }
-    });
-    if (!used.size) used.add('somerset');
-
-    // 점과 이름 (붙어 있는 곳은 이름 하나로)
-    const groupsShown = {};
-    [...used].forEach((id) => {
-      const g = M.places[id].group;
-      if (g) (groupsShown[g] = groupsShown[g] || []).push(id);
-    });
-    let dots = '';
-    [...used].forEach((id) => {
-      const pl = M.places[id];
-      const [x, y] = xy(id);
-      dots += `<circle class="map-dot ${pl.kind}" cx="${f(x)}" cy="${f(y)}" r="6"/>`;
-      if (!pl.group) {
-        dots += `<text class="map-label" x="${f(x + pl.dx)}" y="${f(y + pl.dy)}" text-anchor="${pl.anchor || 'start'}">${esc(pl.name)}</text>`;
-      }
-    });
-    Object.entries(groupsShown).forEach(([g, ids]) => {
-      const G = M.groups[g];
-      const [x, y] = xy(ids[0]);
-      const name = ids.length > 1 ? `${G.name} (${ids.map(placeName).join(' · ')})` : `${G.name} ${placeName(ids[0])}`;
-      dots += `<text class="map-label sea-side" x="${f(x + G.dx)}" y="${f(y + G.dy)}">${esc(name)}</text>`;
-    });
-
-    const peak = P(M.peak.at);
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(M.alt)}">
-      <path class="map-island" d="${islandPath(P)}"/>
-      <path class="map-peak" d="M${f(peak[0] - 7)},${f(peak[1] + 5)} L${f(peak[0])},${f(peak[1] - 6)} L${f(peak[0] + 7)},${f(peak[1] + 5)}Z"/>
-      <text class="map-peak-label" x="${f(peak[0] + 10)}" y="${f(peak[1] + 4)}">${esc(M.peak.name)}</text>
-      ${paths}${labels}${dots}
-    </svg>`;
-  }
-
-  function routeListHTML(sel) {
+  function stepsHTML(key) {
+    const sel = mapSel[key];
     if (sel === 'all') {
       return `<ol class="rt-list">${T.days.map((d, i) => {
         const r = d.route || [];
-        return `<li style="--dc:var(--d${i + 1})"><i></i><b>${dom(d.date)}일</b><span>${r.length > 1 ? esc(r.map(placeName).join(' → ')) : '아직 정하는 중'}</span></li>`;
+        let mins = 0;
+        for (let k = 1; k < r.length; k += 1) { const l = legOf(r[k - 1].at, r[k].at); if (l) mins += l.min; }
+        return `<li style="--dc:var(--d${i + 1})"><button type="button" class="rt-day" data-map-key="${key}" data-map-day="${i}"><i></i><b>${dom(d.date)}일</b><span>${r.length > 1 ? esc(r.map((s) => placeOf(s.at).name).join(' → ')) : '아직 정하는 중'}</span>${mins ? `<em>운전 ${roundMin(mins)}분</em>` : ''}</button></li>`;
       }).join('')}</ol>`;
     }
     const i = Number(sel);
     const d = T.days[i];
     const r = d.route || [];
     if (r.length < 2) return `<p class="rt-empty">${esc(mdw(d.date))}은 아직 동선이 없어요. 후보 탭에서 골라봐요.</p>`;
-    const legs = [];
-    for (let k = 0; k < r.length - 1; k += 1) {
-      const t = T.map.legs[legKey(r[k], r[k + 1])];
-      legs.push(`<li style="--dc:var(--d${i + 1})"><i></i><span>${esc(placeName(r[k]))} → ${esc(placeName(r[k + 1]))}</span>${t ? `<em>${esc(t)}</em>` : ''}</li>`);
-    }
-    return `<ol class="rt-list legs">${legs.join('')}</ol>`;
+    const rows = r.map((s, k) => {
+      const leg = k ? legOf(r[k - 1].at, s.at) : null;
+      return `${leg ? `<li class="st-leg">차로 약 ${roundMin(leg.min)}분 · ${leg.km}km</li>` : ''}
+        <li class="st" style="--dc:var(--d${i + 1})"><button type="button" data-fly="${key}:${k}"><span class="st-n">${k + 1}</span><span class="st-t">${esc(s.time || '')}</span><span class="st-l">${esc(s.label)}<small>${esc(placeOf(s.at).name)}</small></span></button></li>`;
+    }).join('');
+    return `<ol class="steps">${rows}</ol>`;
   }
 
-  function routeMapInner(key) {
+  function routeMapHTML(key, title) {
     const sel = mapSel[key];
     const chips = [`<button type="button" class="mchip" data-map-key="${key}" data-map-day="all" aria-pressed="${sel === 'all'}">전체</button>`]
       .concat(T.days.map((d, i) => `<button type="button" class="mchip" data-map-key="${key}" data-map-day="${i}" aria-pressed="${String(sel) === String(i)}" style="--dc:var(--d${i + 1})"><i></i>${dom(d.date)}일</button>`))
       .join('');
-    return `<div class="mchips" role="group" aria-label="날짜 고르기">${chips}</div>
-      <div class="map-card">${routeSVG(sel)}</div>
-      ${routeListHTML(sel)}
-      <p class="map-note">${esc(T.map.note)}</p>`;
-  }
-
-  function routeMapHTML(key, title) {
     return `<section class="block" id="map-${key}">
       <h2 class="h">${esc(title)}</h2>
       <p class="lede">${esc(T.map.caption)}</p>
-      <div class="card route-map" data-map="${key}">${routeMapInner(key)}</div>
+      <div class="card route-map" data-map="${key}">
+        <div class="mchips" role="group" aria-label="날짜 고르기">${chips}</div>
+        <div class="lmap-wrap"><div class="lmap" id="lmap-${key}" role="img" aria-label="동선 지도"></div><p class="lmap-hint">지도를 한 번 누르면 움직일 수 있어요</p></div>
+        <div class="rt-steps">${stepsHTML(key)}</div>
+        <p class="map-note">${esc(T.map.note)}</p>
+      </div>
     </section>`;
+  }
+
+  function numIcon(label, color) {
+    return window.L.divIcon({ className: 'pin', html: `<span style="--c:${color}">${esc(label)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+  }
+
+  function drawMap(key) {
+    const M = maps[key];
+    if (!M) return;
+    const L = window.L;
+    M.layer.clearLayers();
+    const sel = mapSel[key];
+    const bounds = [];
+    const dayIdx = sel === 'all' ? T.days.map((_, i) => i) : [Number(sel)];
+    dayIdx.forEach((i) => {
+      const r = T.days[i].route || [];
+      const color = dayColor(i);
+      for (let k = 1; k < r.length; k += 1) {
+        const leg = legOf(r[k - 1].at, r[k].at);
+        if (!leg) continue;
+        L.polyline(leg.pts, { color: isDark() ? '#121615' : '#ffffff', weight: sel === 'all' ? 6 : 9, opacity: 0.9 }).addTo(M.layer);
+        L.polyline(leg.pts, { color, weight: sel === 'all' ? 3 : 5, opacity: 0.95 }).addTo(M.layer);
+        leg.pts.forEach((pt) => bounds.push(pt));
+      }
+    });
+    if (sel === 'all') {
+      Object.entries(T.map.places).forEach(([id, pl]) => {
+        L.marker([pl.lat, pl.lon], { icon: L.divIcon({ className: 'pin dot', html: '<span></span>', iconSize: [14, 14], iconAnchor: [7, 7] }) })
+          .bindTooltip(pl.name, { permanent: true, direction: id === 'josun' ? 'right' : id === 'shilla' ? 'left' : 'top', offset: [0, -4], className: 'pin-tip' })
+          .addTo(M.layer);
+        bounds.push([pl.lat, pl.lon]);
+      });
+    } else {
+      const i = Number(sel);
+      const r = T.days[i].route || [];
+      const byPlace = {};
+      r.forEach((s, k) => { (byPlace[s.at] = byPlace[s.at] || []).push(k + 1); });
+      Object.entries(byPlace).forEach(([id, nums]) => {
+        const pl = placeOf(id);
+        L.marker([pl.lat, pl.lon], { icon: numIcon(nums.join('·'), dayColor(i)) })
+          .bindTooltip(pl.name, { permanent: true, direction: 'right', offset: [12, 0], className: 'pin-tip' })
+          .addTo(M.layer);
+        bounds.push([pl.lat, pl.lon]);
+      });
+      if (!r.length) {
+        const pl = placeOf('somerset');
+        L.marker([pl.lat, pl.lon], { icon: numIcon('·', dayColor(i)) }).bindTooltip(pl.name, { permanent: true, direction: 'right', offset: [12, 0], className: 'pin-tip' }).addTo(M.layer);
+        bounds.push([pl.lat, pl.lon]);
+      }
+    }
+    if (bounds.length > 1) M.map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
+    else if (bounds.length) M.map.setView(bounds[0], 12);
+  }
+
+  function initMaps() {
+    Object.keys(maps).forEach((k) => { maps[k].map.remove(); delete maps[k]; });
+    const L = window.L;
+    view.querySelectorAll('.route-map[data-map]').forEach((box) => {
+      const key = box.dataset.map;
+      const el = box.querySelector('.lmap');
+      if (!L || !el) { box.classList.add('no-map'); return; }
+      const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const map = L.map(el, { scrollWheelZoom: false, dragging: !touch, tap: false, zoomControl: true, attributionControl: true });
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+      box.classList.toggle('dark-tiles', isDark());
+      if (touch) {
+        map.once('click', () => { map.dragging.enable(); box.classList.add('map-active'); });
+      } else box.classList.add('map-active');
+      maps[key] = { map, layer: L.layerGroup().addTo(map) };
+      drawMap(key);
+    });
+  }
+
+  function selectMapDay(key, value, scroll) {
+    mapSel[key] = value;
+    const box = view.querySelector(`.route-map[data-map="${key}"]`);
+    if (!box) return;
+    box.querySelectorAll('[data-map-day].mchip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mapDay === String(value))));
+    box.querySelector('.rt-steps').innerHTML = stepsHTML(key);
+    drawMap(key);
+    if (scroll) document.getElementById(`map-${key}`).scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 
   function renderHome() {
@@ -522,23 +522,19 @@
   let pendingGoto = null;
   view.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-map-day]');
-    if (chip) {
-      const key = chip.dataset.mapKey;
-      mapSel[key] = chip.dataset.mapDay;
-      const box = view.querySelector(`.route-map[data-map="${key}"]`);
-      if (box) box.innerHTML = routeMapInner(key);
-      return;
-    }
+    if (chip) { selectMapDay(chip.dataset.mapKey, chip.dataset.mapDay, false); return; }
     const show = e.target.closest('[data-show-day]');
-    if (show) {
-      mapSel.plan = show.dataset.showDay;
-      const box = view.querySelector('.route-map[data-map="plan"]');
-      if (box) {
-        box.innerHTML = routeMapInner('plan');
-        document.getElementById('map-plan').scrollIntoView({ block: 'start', behavior: 'smooth' });
-      }
+    if (show) { selectMapDay('plan', show.dataset.showDay, true); return; }
+    const fly = e.target.closest('[data-fly]');
+    if (fly) {
+      const [key, k] = fly.dataset.fly.split(':');
+      const stop = T.days[Number(mapSel[key])].route[Number(k)];
+      const pl = placeOf(stop.at);
+      if (maps[key]) maps[key].map.flyTo([pl.lat, pl.lon], 14, { duration: 0.6 });
       return;
     }
+    const zoom = e.target.closest('.item-photo img');
+    if (zoom) { openLightbox(zoom.currentSrc || zoom.src, zoom.alt); return; }
     const go = e.target.closest('[data-goto]');
     if (go) pendingGoto = go.dataset.goto;
   });
@@ -635,6 +631,26 @@
       </section>`;
   }
 
+  /* ---------- 사진 크게 보기 ---------- */
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.hidden = true;
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-modal', 'true');
+  lb.innerHTML = '<button type="button" class="lb-close" aria-label="닫기">×</button><img alt=""><p class="lb-cap"></p>';
+  document.body.appendChild(lb);
+  function openLightbox(src, alt) {
+    lb.querySelector('img').src = src;
+    lb.querySelector('img').alt = alt || '';
+    lb.querySelector('.lb-cap').textContent = alt || '';
+    lb.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    lb.querySelector('.lb-close').focus();
+  }
+  function closeLightbox() { lb.hidden = true; document.documentElement.classList.remove('lb-open'); }
+  lb.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lb.hidden) closeLightbox(); });
+
   /* ---------- 탭 전환 ---------- */
   const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo };
   const currentTab = () => {
@@ -650,6 +666,7 @@
       else a.removeAttribute('aria-current');
     });
     foot.textContent = `마지막 업데이트 ${md(T.updated)} · ${T.updatedBy}`;
+    initMaps();
   }
 
   window.addEventListener('hashchange', () => {

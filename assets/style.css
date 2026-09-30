@@ -339,8 +339,6 @@ a { color: var(--sea-ink); }
 
 /* ---------- 지도 ---------- */
 .route-map { padding: 12px; }
-.map-card { margin-top: 10px; border-radius: var(--r-md); background: var(--sea-soft); overflow: hidden; }
-.map-card svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .mchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .mchip {
   appearance: none; font: inherit; flex: none; cursor: pointer;
@@ -351,9 +349,6 @@ a { color: var(--sea-ink); }
 }
 .mchip i { width: 8px; height: 8px; border-radius: 50%; background: var(--dc); }
 .mchip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.rt { fill: none; stroke-width: 3.2; stroke-linecap: round; }
-.rt.thin { stroke-width: 2.4; opacity: .9; }
-.rt-label { font-size: 11px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .rt-list { display: grid; gap: 6px; margin-top: 12px; font-size: .875rem; }
 .rt-list li { display: grid; grid-template-columns: 10px 34px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .rt-list.legs li { grid-template-columns: 10px minmax(0, 1fr) auto; }
@@ -361,15 +356,56 @@ a { color: var(--sea-ink); }
 .rt-list b { font-weight: 700; color: var(--dc); font-variant-numeric: tabular-nums; }
 .rt-list em { font-style: normal; font-weight: 600; color: var(--muted); font-size: .8125rem; }
 .rt-empty { margin-top: 12px; font-size: .875rem; color: var(--muted); }
-.map-island { fill: var(--surface); stroke: var(--island-edge); stroke-width: 1.4; }
-.map-dot { stroke: var(--surface); stroke-width: 2.5; }
-.map-dot.airport { fill: var(--ink); }
-.map-dot.base, .map-dot.stay { fill: var(--ink); }
-.map-label { font-size: 12px; font-weight: 600; fill: var(--ink); }
-.map-label { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
-.map-label.sea-side { stroke: var(--sea-soft); }
-.map-peak { fill: var(--island-edge); }
-.map-peak-label { font-size: 10px; fill: var(--muted); }
+
+/* 실제 지도 */
+.lmap-wrap { position: relative; margin-top: 10px; border-radius: var(--r-md); overflow: hidden; }
+.lmap { height: 300px; background: var(--sunken); z-index: 0; }
+.lmap-hint {
+  position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 500; pointer-events: none;
+  font-size: .75rem; font-weight: 600; color: #fff; background: rgb(20 24 23 / .72); padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+}
+.map-active .lmap-hint, .no-map .lmap-hint { display: none; }
+.no-map .lmap-wrap { display: none; }
+.leaflet-container { font-family: var(--font-body); }
+.lmap .leaflet-tile-container img { width: 256.5px !important; height: 256.5px !important; }
+.lmap .leaflet-tile-pane { filter: saturate(.55) contrast(.95) brightness(1.03); }
+.dark-tiles .lmap .leaflet-tile-container img { width: 256.5px !important; height: 256.5px !important; }
+.lmap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(.4) brightness(.85) contrast(.9); }
+.pin span {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--c); color: #fff; font-weight: 700; font-size: .75rem; letter-spacing: -.02em;
+  box-shadow: 0 0 0 3px #fff, 0 2px 6px rgb(0 0 0 / .25);
+}
+.pin.dot span { width: 14px; height: 14px; background: var(--ink); box-shadow: 0 0 0 3px #fff; }
+.leaflet-tooltip.pin-tip {
+  background: var(--surface); color: var(--ink); border: 0; border-radius: 6px; box-shadow: 0 1px 4px rgb(0 0 0 / .2);
+  font-weight: 700; font-size: .75rem; padding: 2px 7px;
+}
+.leaflet-tooltip.pin-tip::before { display: none; }
+.rt-day { appearance: none; font: inherit; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; text-align: left;
+  display: grid; grid-template-columns: 10px 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; width: 100%; }
+.rt-list li { display: block; }
+.steps { margin-top: 12px; display: grid; }
+.st button { appearance: none; font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; width: 100%;
+  display: grid; grid-template-columns: 26px 46px minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 0; }
+.st-n { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--dc); color: var(--surface); font-weight: 700; font-size: .75rem; }
+.st-t { font-weight: 700; font-size: .875rem; font-variant-numeric: tabular-nums; }
+.st-l { font-weight: 600; font-size: .9375rem; line-height: 1.35; }
+.st-l small { display: block; font-weight: 500; font-size: .75rem; color: var(--muted); }
+.st-leg { margin-left: 11px; padding: 2px 0 2px 25px; border-left: 2px dashed var(--line); font-size: .75rem; color: var(--muted); }
+
+/* 사진 크게 보기 */
+.item-photo img { cursor: zoom-in; }
+.lightbox {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; align-content: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  background: rgb(10 12 12 / .92); cursor: zoom-out;
+}
+.lightbox img { max-width: 100%; max-height: 80vh; border-radius: 10px; object-fit: contain; }
+.lb-cap { color: #e8ece9; font-size: .875rem; text-align: center; }
+.lb-close { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 10px); right: 12px; width: 44px; height: 44px; border-radius: 50%;
+  border: 0; background: rgb(255 255 255 / .14); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.lb-open, .lb-open body { overflow: hidden; }
 .map-note { font-size: .75rem; color: var(--muted); margin-top: 10px; }
 
 /* ---------- 일정: 상태 범례 ---------- */
