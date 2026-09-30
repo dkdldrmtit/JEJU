@@ -986,7 +986,8 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lb.hidden) closeLightbox(); });
 
   /* ---------- 움직임: 등장 · 상단 바 · 토스트 · D-day ---------- */
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 휴대폰의 '동작 줄이기' 설정과 상관없이 효과를 보여줌 (가족 요청)
+  const reduceMotion = false;
   const topbar = document.createElement('div');
   topbar.className = 'topbar';
   topbar.setAttribute('aria-hidden', 'true');

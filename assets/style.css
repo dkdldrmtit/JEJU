@@ -644,9 +644,6 @@ textarea.fb-input { resize: vertical; min-height: 76px; }
   .tabbar { left: 50%; right: auto; width: 720px; transform: translateX(-50%); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
-}
 
 /* =====================================================================
    마감 레이어 — 글자 단계 · 줄바꿈 · 날씨 · 의견함 · 움직임
@@ -893,4 +890,3 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 .sky-plane { fill: var(--wx-rain); }
 .sky-plane.big { filter: drop-shadow(0 2px 3px rgb(0 0 0 / .18)); }
 .sky-plane.small { opacity: .45; }
-@media (prefers-reduced-motion: reduce) { .pl-sky, .buddy { display: none; } }
