@@ -847,3 +847,17 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 @keyframes inv-sway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-1.6deg); } }
 .view-in .inv-photo img { animation: inv-up .7s var(--ease) .15s both, inv-sway 6s ease-in-out 1s infinite; }
 .view-in .inv-bubble { animation: inv-pop .55s var(--ease) .75s both; }
+
+/* 카톡으로 초대장 보내기 */
+.kakao-share {
+  appearance: none; font: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 14px;
+  padding: 10px 16px 10px 13px; border: 0; border-radius: 999px;
+  background: #FEE500; color: #191600; font-size: var(--fs-sm); font-weight: 700; white-space: nowrap;
+  box-shadow: 0 6px 16px rgb(120 100 0 / .18);
+  transition: transform .18s var(--ease), box-shadow .2s var(--ease);
+}
+.kakao-share svg { width: 18px; height: 18px; }
+.kakao-share:active { transform: scale(.96); }
+@media (hover: hover) { .kakao-share:hover { box-shadow: 0 8px 22px rgb(120 100 0 / .26); } }
+.view-in .kakao-share { animation: pop .45s var(--ease) 1s both; }

@@ -36,6 +36,7 @@
     meal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8"/><path d="M11 3v8a2 2 0 0 1-2 2"/><path d="M17 21V3c-2 1.5-3 4-3 7s1 4 3 4"/></svg>',
     plane: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 13.5 3 11l1.5-1.5 7 1L16 6a2.1 2.1 0 0 1 3 3l-4.5 4.5 1 7L14 22l-2.5-7.5"/></svg>',
     moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+    talk: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5c-5 0-9 3.2-9 7.1 0 2.5 1.6 4.7 4.1 5.9l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.4 0 .9.1 1.3.1 5 0 9-3.2 9-7.1S17 3.5 12 3.5z"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
     route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
@@ -166,6 +167,7 @@
         <p class="inv-dates">${md(T.start)}(${wd(T.start)}) – ${md(T.end)}(${wd(T.end)})</p>
         <p class="dday"><b>${esc(big)}</b><span>${esc(small)}</span></p>
         <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
+        ${T.share ? `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>` : ''}
       </div>
       ${H.photo ? `<figure class="inv-photo">
         <p class="inv-bubble">${esc(H.bubble || '')}</p>
@@ -669,6 +671,7 @@
   });
   let pendingGoto = null;
   view.addEventListener('click', (e) => {
+    if (e.target.closest('[data-share]')) { shareInvite(); return; }
     const chip = e.target.closest('[data-map-day]');
     if (chip) { selectMapDay(chip.dataset.mapKey, chip.dataset.mapDay, false); return; }
     const show = e.target.closest('[data-show-day]');
@@ -784,6 +787,50 @@
         <div class="card info-card"><ul class="bullets">${T.about.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></div>
         ${Object.keys(T.photos || {}).length ? `<p class="src">사진 출처 · ${Object.values(T.photos).map((ph) => esc(`${ph.alt} — ${ph.credit}`)).join(' / ')}</p>` : ''}
       </section>`;
+  }
+
+  /* ---------- 카톡 초대장 보내기 (카카오 공유) ---------- */
+  let kakaoShare = null;
+  function loadKakaoShare() {
+    if (!T.share || !T.map.kakaoKey) return Promise.resolve(false);
+    if (!kakaoShare) {
+      kakaoShare = new Promise((resolve) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.8.0/kakao.min.js';
+        sc.onload = () => {
+          try {
+            if (!window.Kakao.isInitialized()) window.Kakao.init(T.map.kakaoKey);
+            resolve(Boolean(window.Kakao.Share));
+          } catch (e) { resolve(false); }
+        };
+        sc.onerror = () => resolve(false);
+        document.head.appendChild(sc);
+      });
+    }
+    return kakaoShare;
+  }
+  // 버튼을 누른 순간 바로 보내야 팝업이 막히지 않아서, 홈을 열 때 미리 불러둠
+  const kakaoShareReady = () => Boolean(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share);
+
+  async function shareInvite() {
+    const S = T.share;
+    const url = (T.site && T.site.url) || location.href.split('#')[0];
+    const link = { mobileWebUrl: url, webUrl: url };
+    if (kakaoShareReady()) {
+      try {
+        window.Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: { title: S.title, description: S.text, imageUrl: S.image, imageWidth: 1200, imageHeight: 630, link },
+          buttons: [{ title: S.button || '초대장 열기', link }],
+        });
+        return;
+      } catch (e) { /* 아래 방법으로 */ }
+    }
+    if (navigator.share) {
+      try { await navigator.share({ title: S.title, text: S.text, url }); } catch (e) { /* 취소 */ }
+      return;
+    }
+    try { await navigator.clipboard.writeText(url); toast('링크를 복사했어요. 카톡에 붙여넣어 주세요'); } catch (e) { toast(url); }
   }
 
   /* ---------- 가족 의견 (구글 시트에 저장) ---------- */
@@ -1004,6 +1051,7 @@
     fillWeather();
     updateTopbar();
     animateIn();
+    if (view.querySelector('[data-share]')) loadKakaoShare();
   }
 
   window.addEventListener('hashchange', () => {

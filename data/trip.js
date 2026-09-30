@@ -9,6 +9,14 @@ window.TRIP = {
   shortTitle: '제주 가족여행',
   eyebrow: '2026 가을 · 5박 6일',
   tagline: '일곱 식구가 제주에서 만나요',
+  /* 카톡 초대장 (홈의 '카톡으로 초대장 보내기' 버튼) */
+  site: { url: 'https://dkdldrmtit.github.io/JEJU/' },
+  share: {
+    title: '태오가 보내는 초대장',
+    text: '태오랑 제주 여행 가요! 10.11(일) – 10.16(금) 5박 6일, 일곱 식구가 제주에서 만나요.',
+    image: 'https://dkdldrmtit.github.io/JEJU/assets/og-taeo.jpg',
+    button: '초대장 열기',
+  },
   /* 홈 맨 위 초대 카드 */
   hero: {
     eyebrow: '태오가 보내는 초대장',
@@ -232,6 +240,7 @@ window.TRIP = {
 
   /* 업데이트 소식: 사이트가 바뀔 때마다 위에 한 줄씩 추가 (AI 반영 포함) */
   updates: [
+    { date: '2026-10-01', text: '홈에서 카톡으로 태오 초대장을 보낼 수 있어요' },
     { date: '2026-10-01', text: '홈 맨 위를 태오의 초대장으로 바꿨어요' },
     { date: '2026-10-01', text: '동선 지도를 카카오맵으로 바꿨어요' },
     { date: '2026-10-01', text: '렌터카(제주엔젤카) 정보와 차고지 동선을 넣었어요' },
