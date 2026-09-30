@@ -862,26 +862,51 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 /* =====================================================================
    스크롤 효과 — 까딱까딱 태오 · 날아다니는 비행기
    ===================================================================== */
-/* 사진 한 장으로 만든 컷 3개: 왼쪽 갸웃 → 좌우 반전 → 폴짝 */
+/* 사진 한 장으로 만든 컷 3개: 가만히 → 왼쪽 갸웃 → 오른쪽 갸웃하며 폴짝 (좌우 반전 없음) */
 .inv-flip { display: block; width: 100%; transform-origin: 50% 90%; transition: transform .09s steps(2, end); }
 .inv-flip.f0 { transform: rotate(0); }
 .inv-flip.f1 { transform: rotate(-7deg); }
-.inv-flip.f2 { transform: scaleX(-1) rotate(-5deg) translateY(-6px); }
+.inv-flip.f2 { transform: rotate(5deg) translateY(-5px); }
 .inv-photo .inv-flip img { width: 100%; max-width: 190px; margin-inline: auto; }
 
-.buddy {
-  position: fixed; right: 12px; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px); z-index: 8;
-  width: 56px; padding: 0; border: 0; background: none; cursor: pointer;
-  transform: translateY(24px) scale(.6); opacity: 0; pointer-events: none;
-  transition: transform .35s var(--ease), opacity .25s;
+/* 비행기 탄 태오 — 스크롤을 따라 화면 아래쪽을 날아다님 */
+.flyer {
+  position: fixed; left: 50%; width: min(100vw, 720px); height: 140px; z-index: 8;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 6px);
+  transform: translateX(-50%); pointer-events: none; overflow: hidden;
+  opacity: 0; transition: opacity .3s;
 }
-.buddy.show { transform: none; opacity: 1; pointer-events: auto; }
-.buddy.typing { opacity: 0; pointer-events: none; }
-.buddy img {
-  display: block; width: 100%; height: auto;
-  filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 6px 10px rgb(0 0 0 / .22));
+.flyer.show { opacity: 1; }
+.flyer.typing { opacity: 0; }
+.fly-plane {
+  position: absolute; left: 0; bottom: 8px; width: 150px; height: 96px;
+  padding: 0; border: 0; background: none; cursor: pointer; pointer-events: none;
+  transform: translate(-150px, 0); will-change: transform;
 }
-@media (min-width: 760px) { .buddy { right: calc(50% - 360px + 12px); } }
+.flyer.show .fly-plane { pointer-events: auto; }
+.fly-plane svg { display: block; overflow: visible; width: 100%; height: auto; }
+.fly-body { animation: fly-bob 2.4s ease-in-out infinite; transform-origin: 75px 60px; filter: drop-shadow(0 5px 6px rgb(0 0 0 / .18)); }
+.fp-hull { fill: #FFD45C; stroke: #E8A91B; stroke-width: 1.5; }
+.fp-stripe { fill: #FF8A5B; }
+.fp-nose { fill: #4D8FD6; }
+.fp-tail { fill: #4D8FD6; }
+.fp-wing { fill: #6FA8E6; }
+.fp-wing.far { fill: #3E78BB; }
+.fp-dot { fill: #fff; stroke: #E8A91B; stroke-width: 1.2; }
+.fp-hub { fill: #5A6270; }
+.fp-glass { fill: #BFE3FF; stroke: #4D8FD6; stroke-width: 1.2; opacity: .85; }
+.fp-scarf { fill: #FF6B6B; transform-origin: 64px 45px; animation: fly-scarf .5s ease-in-out infinite alternate; }
+.fp-prop { fill: #5A6270; opacity: .55; transform-origin: 139px 65px; animation: fly-prop .16s linear infinite; }
+.fp-taeo { filter: drop-shadow(0 0 1.5px #fff); }
+.puff {
+  position: absolute; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .12);
+  animation: fly-puff .9s ease-out forwards; pointer-events: none;
+}
+@keyframes fly-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-5px) rotate(-2deg); } }
+@keyframes fly-scarf { from { transform: rotate(-4deg); } to { transform: rotate(6deg) scaleY(.8); } }
+@keyframes fly-prop { from { transform: scaleY(1); } 50% { transform: scaleY(.15); } to { transform: scaleY(1); } }
+@keyframes fly-puff { from { opacity: .9; transform: scale(.5); } to { opacity: 0; transform: translateX(var(--dx, -20px)) scale(1.6); } }
 
 /* 시간표 위를 나는 비행기 */
 .planner-card { position: relative; overflow: hidden; }

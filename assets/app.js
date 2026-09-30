@@ -1032,22 +1032,88 @@
     }
   }
 
-  /* ---------- 스크롤 효과: 까딱까딱 태오 · 날아다니는 비행기 ---------- */
+  /* ---------- 스크롤 효과: 까딱까딱 태오 · 비행기 탄 태오 · 날아다니는 비행기 ---------- */
   const FRAMES = ['f0', 'f1', 'f2'];
   let flipStep = 0;
   let lastY = window.scrollY;
   let travelled = 0;
   let restTimer = null;
 
-  // 초대 카드가 화면 밖으로 나가면 오른쪽 아래에서 따라다니는 작은 태오
-  const buddy = document.createElement('button');
-  buddy.type = 'button';
-  buddy.className = 'buddy';
-  buddy.setAttribute('aria-label', '맨 위로');
+  // 초대 카드가 화면 밖으로 나가면, 비행기를 탄 태오가 스크롤을 따라 화면 아래쪽을 날아다님
+  const FLY_W = 150;
+  const FLY_H = 96;
+  const flyer = document.createElement('div');
+  flyer.className = 'flyer';
+  flyer.setAttribute('aria-hidden', 'true');
+  const fly = { x: -FLY_W, dir: 1, dist: 0, puff: 0 };
   if (T.hero && T.hero.photo) {
-    buddy.innerHTML = `<span class="inv-flip f0" data-flip><img src="${esc(T.hero.photo)}" alt="" width="430" height="561"></span>`;
-    document.body.appendChild(buddy);
-    buddy.addEventListener('click', () => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }));
+    flyer.innerHTML = `<button type="button" class="fly-plane" tabindex="-1" aria-label="맨 위로">
+      <svg viewBox="0 0 ${FLY_W} ${FLY_H}" width="${FLY_W}" height="${FLY_H}">
+        <g class="fly-body">
+          <g class="fly-mirror">
+            <path class="fp-scarf" d="M66 41 C 54 36, 44 43, 30 36 C 34 45, 46 48, 64 49 Z"/>
+            <path class="fp-tail" d="M20 60 L 8 36 Q 7 32 11 32 L 20 32 Q 24 32 27 36 L 42 58 Z"/>
+            <path class="fp-wing far" d="M70 60 L 92 44 Q 95 42 98 44 L 100 47 L 90 62 Z"/>
+          </g>
+          <image class="fp-taeo" href="${esc(T.hero.photo)}" width="44" height="57" preserveAspectRatio="xMidYMin meet"/>
+          <g class="fly-mirror">
+            <path class="fp-glass" d="M101 51 Q 103 38 113 39 Q 117 40 117 51 Z"/>
+            <path class="fp-hull" d="M14 58 Q 16 50 30 50 L 106 50 Q 130 50 134 64 Q 130 80 104 80 L 40 80 Q 22 80 14 66 Z"/>
+            <path class="fp-stripe" d="M20 66 L 128 66 Q 127 71 124 72 L 24 72 Q 21 70 20 66 Z"/>
+            <path class="fp-nose" d="M124 54 Q 134 57 136 65 Q 134 74 124 77 Z"/>
+            <path class="fp-wing near" d="M58 70 L 86 94 Q 88 96 92 96 L 100 96 Q 103 96 102 93 L 88 70 Z"/>
+            <circle class="fp-dot" cx="112" cy="61" r="2.6"/>
+            <g class="fp-prop"><ellipse cx="139" cy="65" rx="2.6" ry="17"/></g>
+            <circle class="fp-hub" cx="138" cy="65" r="3.2"/>
+          </g>
+        </g>
+      </svg>
+    </button>`;
+    document.body.appendChild(flyer);
+    flyer.querySelector('.fly-plane').addEventListener('click', () => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }));
+  }
+  const flyPlane = flyer.querySelector('.fly-plane');
+  const flyTaeo = flyer.querySelector('.fp-taeo');
+  const flyMirrors = flyer.querySelectorAll('.fly-mirror');
+
+  function setFlyDir(dir) {
+    if (!flyTaeo) return;
+    fly.dir = dir;
+    // 비행기는 가는 방향으로 돌지만, 태오 사진은 뒤집지 않고 조종석 자리만 옮김
+    flyMirrors.forEach((g) => g.setAttribute('transform', dir > 0 ? '' : `translate(${FLY_W} 0) scale(-1 1)`));
+    flyTaeo.setAttribute('x', dir > 0 ? 58 : FLY_W - 58 - 44);
+    flyTaeo.setAttribute('y', 1);
+    flyer.classList.toggle('left', dir < 0);
+  }
+  setFlyDir(1);
+
+  function moveFlyer(dy) {
+    if (!flyTaeo || !dy) return;
+    const box = flyer.clientWidth || window.innerWidth;
+    const dir = dy > 0 ? 1 : -1;
+    if (dir !== fly.dir) setFlyDir(dir);
+    const span = box + FLY_W * 2;
+    fly.x += dy * 0.55;
+    fly.x = ((((fly.x + FLY_W) % span) + span) % span) - FLY_W;
+    fly.dist += Math.abs(dy);
+    const wave = Math.sin(fly.dist / 160);
+    const lift = -wave * 16;
+    const tilt = -Math.cos(fly.dist / 160) * 7 * dir;
+    flyPlane.style.transform = `translate(${fly.x}px, ${lift}px) rotate(${tilt}deg)`;
+    fly.puff += Math.abs(dy);
+    if (fly.puff > 46) { fly.puff = 0; addPuff(lift); }
+  }
+
+  function addPuff(lift) {
+    if (flyer.querySelectorAll('.puff').length > 7) return;
+    const el = document.createElement('i');
+    el.className = 'puff';
+    const tailX = fly.dir > 0 ? fly.x + 10 : fly.x + FLY_W - 10;
+    el.style.left = `${tailX}px`;
+    el.style.bottom = `${49 - lift}px`;
+    el.style.setProperty('--dx', `${-fly.dir * 22}px`);
+    flyer.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
   }
 
   function setFrame(step) {
@@ -1104,7 +1170,8 @@
 
   function onScroll() {
     const y = window.scrollY;
-    travelled += Math.abs(y - lastY);
+    const dy = y - lastY;
+    travelled += Math.abs(dy);
     lastY = y;
     if (!reduceMotion && travelled > 70) {
       travelled = 0;
@@ -1115,7 +1182,8 @@
     }
     const inv = view.querySelector('.invite');
     const heroGone = !inv || inv.getBoundingClientRect().bottom < 40;
-    buddy.classList.toggle('show', heroGone && y > 120);
+    flyer.classList.toggle('show', heroGone && y > 120);
+    moveFlyer(dy);
     drawSky();
   }
   let scrollQueued = false;
@@ -1125,8 +1193,8 @@
     requestAnimationFrame(() => { scrollQueued = false; onScroll(); });
   }, { passive: true });
   window.addEventListener('resize', () => buildSky());
-  document.addEventListener('focusin', (e) => { if (e.target.matches('input, textarea, select')) buddy.classList.add('typing'); });
-  document.addEventListener('focusout', () => buddy.classList.remove('typing'));
+  document.addEventListener('focusin', (e) => { if (e.target.matches('input, textarea, select')) flyer.classList.add('typing'); });
+  document.addEventListener('focusout', () => flyer.classList.remove('typing'));
 
   /* ---------- 탭 전환 ---------- */
   const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo };
