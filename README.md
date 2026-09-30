@@ -34,3 +34,14 @@
 ## 올리지 않는 것
 
 공개 저장소라 누구나 볼 수 있어요. 예약번호, 개인 연락처, 금액·예산은 여기에 올리지 않아요.
+
+## 카카오맵 켜기 (선택, 휴대폰 브라우저로 가능)
+
+키가 없으면 동선 지도는 OpenStreetMap으로 나와요. 카카오맵으로 바꾸려면:
+
+1. [developers.kakao.com](https://developers.kakao.com) 로그인 → **내 애플리케이션 → 애플리케이션 추가하기** (이름: 제주가족여행)
+2. 만든 앱 → **앱 설정 → 플랫폼 → Web 플랫폼 등록** → 사이트 도메인 `https://dkdldrmtit.github.io`
+3. **제품 설정 → 카카오맵** 에서 사용 설정 **ON**
+4. **앱 키**의 **JavaScript 키**를 `data/trip.js` 의 `map.kakaoKey` 에 넣기 (또는 Claude에게 보내기)
+
+JavaScript 키는 등록한 도메인에서만 동작해서 공개돼도 괜찮아요.

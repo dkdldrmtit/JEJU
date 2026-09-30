@@ -78,16 +78,22 @@ window.TRIP = {
   ],
 
   car: {
-    model: '카니발 하이리무진 7인승',
+    model: '더뉴 카니발 하이리무진 7인승',
+    detail: '4세대 · 24–25년식 · 휘발유 · 서라운드뷰',
+    company: '제주엔젤카',
     driver: '민석',
-    pickup: { date: '2026-10-11', time: null, place: null },
-    return: { date: '2026-10-16', time: null, place: null },
+    pickup: { date: '2026-10-11', time: '11:00', place: '제주엔젤카 차고지' },
+    return: { date: '2026-10-16', time: '11:30', place: '제주엔젤카 차고지' },
+    address: '제주시 도령로 171-1 (공항에서 셔틀로 5분)',
+    insurance: '고급 면책 (N고급면책)',
     seats: '2 · 2 · 3 (7명이면 모든 자리 사용)',
     notes: [
+      '공항 도착 후 렌터카 셔틀 타는 곳에서 엔젤카 셔틀 타기',
+      '반납 예약은 11:30이지만 비행기가 12:20이라 10:50쯤 일찍 반납해요',
       '6세 미만은 카시트 필수예요. 태오 카시트는 렌터카 옵션으로 빌리거나 집에서 가져가요',
       '카시트 고정 장치(ISOFIX) 위치는 차마다 달라서 인수할 때 확인',
       '7명이 다 타면 트렁크가 좁아요. 공항 마중·배웅 날엔 유모차는 숙소에 두고 가요',
-      '반납은 비행기 1시간 30분 전쯤 (반납 후 셔틀로 공항까지 10–20분)',
+      '휘발유 차예요. 반납 전에 받았을 때만큼 기름 채우기',
     ],
   },
 
@@ -95,13 +101,14 @@ window.TRIP = {
   bookings: [
     { icon: 'bed', title: '신라호텔 제주', meta: '10.11(일) 1박 · 민석 · 시윤 · 태오', status: 'ok', q: '제주신라호텔' },
     { icon: 'bed', title: '서머셋 제주신화월드', meta: '10.12(월) – 10.16(금) 4박 · 방 3개 · 7명', status: 'ok', q: '서머셋 제주신화월드' },
-    { icon: 'car', title: '카니발 하이리무진 7인승', meta: '10.11(일) 인수 → 10.16(금) 반납 · 운전 민석', status: 'ok' },
+    { icon: 'car', title: '카니발 하이리무진 7인승', meta: '제주엔젤카 · 10.11(일) 11:00 인수 → 10.16(금) 반납 · 운전 민석', status: 'ok', q: '제주엔젤카' },
     { icon: 'meal', accent: true, title: '그랜드 조선 제주 · 아리아 뷔페 점심', meta: '10.13(화) 12:00 · 7명 모두 (태오 무료)', status: 'plan', q: '그랜드조선 제주 아리아' },
   ],
 
   todo: [
     { text: '숙소 예약 (신라호텔 · 서머셋)', done: true },
-    { text: '렌터카 예약 (카니발 하이리무진)', done: true },
+    { text: '렌터카 예약 (제주엔젤카 · 고급 면책)', done: true },
+    { text: '렌터카 일찍 반납 확인', note: '예약 11:30 → 10:50쯤 반납 (비행기 12:20)', done: false },
     { text: '후발대 항공편 정리', note: '12일 ZE715 21:40 도착 · 15일 OZ8234 15:10 출발', done: true },
     { text: '민석 · 시윤 · 태오 항공편 정리', note: '11일 7C111 · 16일 7C118', done: true },
     { text: '제주항공 예약에 태오 유아 등록 확인', note: '예약 안내엔 \'민석 외 1명\'만 보여요', done: false },
@@ -121,12 +128,12 @@ window.TRIP = {
       /* 계획표: [시작, 끝, 이름, 종류(fly·move·meal·play·rest), 'tbd'=미정, 사진 이름] */
       blocks: [['09:20', '10:35', '김포→제주', 'fly'], ['10:35', '11:30', '렌터카', 'move'], ['11:30', '12:30', '신라로', 'move'], ['12:30', '13:30', '호텔 점심', 'meal'], ['13:30', '18:00', '호텔 놀기', 'play', null, 'shilla'], ['18:00', '19:30', '저녁', 'meal', 'tbd'], ['19:30', '22:00', '쉬기', 'rest']],
       brief: '10:35 도착 · 신라호텔에서만',
-      route: [{ at: 'cju', time: '10:35', label: '제주공항 도착' }, { at: 'shilla', time: '12:30', label: '신라호텔 도착' }],
+      route: [{ at: 'cju', time: '10:35', label: '제주공항 도착' }, { at: 'rent', time: '11:00', label: '렌터카 인수' }, { at: 'shilla', time: '12:30', label: '신라호텔 도착' }],
       title: '먼저 출발 · 신라호텔에서만 하루',
       night: 'shilla',
       items: [
         { time: '10:35', title: '제주공항 도착', status: 'ok', who: 'a', note: '제주항공 7C111 (김포 09:20 출발)' },
-        { time: '11:00', title: '렌터카 인수', status: 'ok', note: '카니발 하이리무진 · 카시트 설치 확인' },
+        { time: '11:00', title: '렌터카 인수', status: 'ok', note: '제주엔젤카 · 공항에서 셔틀로 차고지까지 약 5분 · 카시트 설치 확인', place: '제주엔젤카' },
         { time: '12:30', title: '신라호텔 도착 · 짐 맡기고 호텔 안에서 점심', status: 'plan', note: '공항에서 중문까지 차로 1시간 안팎 · 얼리 체크인 되는지 미리 물어보기', place: '제주신라호텔' },
         { time: '15:00', title: '신라호텔 제주 체크인', status: 'ok' },
         { time: null, when: '오후', title: '호텔 안에서 쉬고 놀기', status: 'ok', photo: 'shilla', note: '이날은 신라호텔 밖으로 안 나가요 · 온수 야외 수영장' },
@@ -194,12 +201,12 @@ window.TRIP = {
       /* 계획표: [시작, 끝, 이름, 종류(fly·move·meal·play·rest), 'tbd'=미정, 사진 이름] */
       blocks: [['08:00', '09:40', '짐 싸기', 'rest'], ['09:40', '11:20', '반납·공항', 'move'], ['12:20', '13:35', '제주→김포', 'fly']],
       brief: '09:40 체크아웃 · 12:20 비행기',
-      route: [{ at: 'somerset', time: '09:40', label: '체크아웃' }, { at: 'cju', time: '10:50', label: '렌터카 반납 · 12:20 비행기' }],
+      route: [{ at: 'somerset', time: '09:40', label: '체크아웃' }, { at: 'rent', time: '10:50', label: '렌터카 반납' }, { at: 'cju', time: '11:20', label: '공항 · 12:20 비행기' }],
       title: '집으로',
       nightNote: '민석 · 시윤 · 태오 집으로',
       items: [
         { time: '09:40', title: '서머셋 체크아웃 · 공항 쪽으로 출발', status: 'plan', note: '짐은 전날 밤에 싸두기 · 차로 약 40분' },
-        { time: '10:50', title: '렌터카 반납', status: 'ok', note: '비행기 1시간 30분 전 · 셔틀로 공항까지 10–20분' },
+        { time: '10:50', title: '렌터카 반납', status: 'ok', note: '예약은 11:30이지만 비행기 때문에 일찍 반납 · 셔틀로 공항까지 약 5분', place: '제주엔젤카' },
         { time: '11:20', title: '공항 도착 · 짐 부치기', status: 'plan', note: '출발 1시간 전' },
         { time: '12:20', title: '제주 출발', status: 'ok', who: 'a', note: '제주항공 7C118 → 김포 13:35 도착' },
       ],
@@ -380,10 +387,13 @@ window.TRIP = {
 
   /* 동선 지도: 장소 좌표 (OpenStreetMap 기준). 경로는 tools/build-routes.js 로 data/routes.js 에 만들어요 */
   map: {
+    /* 카카오맵 JavaScript 키 (developers.kakao.com, 사이트 도메인 https://dkdldrmtit.github.io 등록). 비어 있으면 OpenStreetMap */
+    kakaoKey: '',
     caption: '날짜를 누르면 그날 동선이 실제 도로 위에 시간 순서대로 그려져요.',
     note: '이동 시간은 막히지 않을 때 기준이에요. 넉넉히 잡아주세요.',
     places: {
       cju: { name: '제주공항', lat: 33.507071, lon: 126.491644 },
+      rent: { name: '엔젤카 차고지', lat: 33.496278, lon: 126.494111 }, // 도령로 171-1 근처 (대략)
       shilla: { name: '신라호텔', lat: 33.247476, lon: 126.406888 },
       josun: { name: '그랜드조선', lat: 33.250366, lon: 126.409920 },
       somerset: { name: '서머셋', lat: 33.300126, lon: 126.318729 },

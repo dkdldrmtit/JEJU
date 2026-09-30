@@ -329,6 +329,50 @@
     </section>`;
   }
 
+  /* 지도 엔진: 카카오맵 키가 있으면 카카오맵, 없으면 Leaflet(OpenStreetMap) */
+  let kakaoReady = null;
+  function loadKakao() {
+    if (!T.map.kakaoKey) return Promise.resolve(false);
+    if (!kakaoReady) {
+      kakaoReady = new Promise((resolve) => {
+        const sc = document.createElement('script');
+        sc.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(T.map.kakaoKey)}&autoload=false`;
+        sc.onload = () => window.kakao.maps.load(() => resolve(true));
+        sc.onerror = () => resolve(false);
+        document.head.appendChild(sc);
+      });
+    }
+    return kakaoReady;
+  }
+
+  // 공통: 그릴 것 목록 만들기 (선 · 번호 핀 · 이름표)
+  function mapShapes(key) {
+    const sel = mapSel[key];
+    const lines = [];
+    const pins = [];
+    const dayIdx = sel === 'all' ? T.days.map((_, i) => i) : [Number(sel)];
+    dayIdx.forEach((i) => {
+      const r = T.days[i].route || [];
+      for (let k = 1; k < r.length; k += 1) {
+        const leg = legOf(r[k - 1].at, r[k].at);
+        if (leg) lines.push({ pts: leg.pts, color: dayColor(i), thin: sel === 'all' });
+      }
+    });
+    if (sel === 'all') {
+      Object.values(T.map.places).forEach((pl) => pins.push({ pl, label: '', color: 'var(--ink)', dot: true }));
+    } else {
+      const i = Number(sel);
+      const r = T.days[i].route || [];
+      const byPlace = {};
+      r.forEach((s, k) => { (byPlace[s.at] = byPlace[s.at] || []).push(k + 1); });
+      Object.entries(byPlace).forEach(([id, nums]) => pins.push({ pl: placeOf(id), label: nums.join('·'), color: dayColor(i) }));
+      if (!r.length) pins.push({ pl: placeOf('somerset'), label: '·', color: dayColor(i) });
+    }
+    return { lines, pins };
+  }
+
+  const pinHTML = (p) => `<div class="kpin"><span class="${p.dot ? 'dot' : ''}" style="--c:${p.color}">${esc(p.label)}</span><em>${esc(p.pl.name)}</em></div>`;
+
   function numIcon(label, color) {
     return window.L.divIcon({ className: 'pin', html: `<span style="--c:${color}">${esc(label)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] });
   }
@@ -336,69 +380,90 @@
   function drawMap(key) {
     const M = maps[key];
     if (!M) return;
+    const { lines, pins } = mapShapes(key);
+    if (M.kind === 'kakao') {
+      const K = window.kakao.maps;
+      M.items.forEach((it) => it.setMap(null));
+      M.items = [];
+      const bounds = new K.LatLngBounds();
+      lines.forEach((ln) => {
+        const path = ln.pts.map(([la, lo]) => new K.LatLng(la, lo));
+        M.items.push(new K.Polyline({ map: M.map, path, strokeWeight: ln.thin ? 6 : 9, strokeColor: '#ffffff', strokeOpacity: 0.9 }));
+        M.items.push(new K.Polyline({ map: M.map, path, strokeWeight: ln.thin ? 3 : 5, strokeColor: ln.color, strokeOpacity: 0.95 }));
+        path.forEach((ll) => bounds.extend(ll));
+      });
+      pins.forEach((p) => {
+        const ll = new K.LatLng(p.pl.lat, p.pl.lon);
+        M.items.push(new K.CustomOverlay({ map: M.map, position: ll, content: pinHTML(p), xAnchor: 0.5, yAnchor: 0.5, zIndex: 3 }));
+        bounds.extend(ll);
+      });
+      if (!bounds.isEmpty()) M.map.setBounds(bounds, 36, 24, 36, 24);
+      return;
+    }
     const L = window.L;
     M.layer.clearLayers();
-    const sel = mapSel[key];
     const bounds = [];
-    const dayIdx = sel === 'all' ? T.days.map((_, i) => i) : [Number(sel)];
-    dayIdx.forEach((i) => {
-      const r = T.days[i].route || [];
-      const color = dayColor(i);
-      for (let k = 1; k < r.length; k += 1) {
-        const leg = legOf(r[k - 1].at, r[k].at);
-        if (!leg) continue;
-        L.polyline(leg.pts, { color: isDark() ? '#121615' : '#ffffff', weight: sel === 'all' ? 6 : 9, opacity: 0.9 }).addTo(M.layer);
-        L.polyline(leg.pts, { color, weight: sel === 'all' ? 3 : 5, opacity: 0.95 }).addTo(M.layer);
-        leg.pts.forEach((pt) => bounds.push(pt));
-      }
+    lines.forEach((ln) => {
+      L.polyline(ln.pts, { color: isDark() ? '#121615' : '#ffffff', weight: ln.thin ? 6 : 9, opacity: 0.9 }).addTo(M.layer);
+      L.polyline(ln.pts, { color: ln.color, weight: ln.thin ? 3 : 5, opacity: 0.95 }).addTo(M.layer);
+      ln.pts.forEach((pt) => bounds.push(pt));
     });
-    if (sel === 'all') {
-      Object.entries(T.map.places).forEach(([id, pl]) => {
-        L.marker([pl.lat, pl.lon], { icon: L.divIcon({ className: 'pin dot', html: '<span></span>', iconSize: [14, 14], iconAnchor: [7, 7] }) })
-          .bindTooltip(pl.name, { permanent: true, direction: id === 'josun' ? 'right' : id === 'shilla' ? 'left' : 'top', offset: [0, -4], className: 'pin-tip' })
-          .addTo(M.layer);
-        bounds.push([pl.lat, pl.lon]);
-      });
-    } else {
-      const i = Number(sel);
-      const r = T.days[i].route || [];
-      const byPlace = {};
-      r.forEach((s, k) => { (byPlace[s.at] = byPlace[s.at] || []).push(k + 1); });
-      Object.entries(byPlace).forEach(([id, nums]) => {
-        const pl = placeOf(id);
-        L.marker([pl.lat, pl.lon], { icon: numIcon(nums.join('·'), dayColor(i)) })
-          .bindTooltip(pl.name, { permanent: true, direction: 'right', offset: [12, 0], className: 'pin-tip' })
-          .addTo(M.layer);
-        bounds.push([pl.lat, pl.lon]);
-      });
-      if (!r.length) {
-        const pl = placeOf('somerset');
-        L.marker([pl.lat, pl.lon], { icon: numIcon('·', dayColor(i)) }).bindTooltip(pl.name, { permanent: true, direction: 'right', offset: [12, 0], className: 'pin-tip' }).addTo(M.layer);
-        bounds.push([pl.lat, pl.lon]);
-      }
-    }
+    pins.forEach((p) => {
+      const icon = p.dot
+        ? L.divIcon({ className: 'pin dot', html: '<span></span>', iconSize: [14, 14], iconAnchor: [7, 7] })
+        : numIcon(p.label, p.color);
+      L.marker([p.pl.lat, p.pl.lon], { icon })
+        .bindTooltip(p.pl.name, { permanent: true, direction: 'right', offset: [p.dot ? 8 : 12, 0], className: 'pin-tip' })
+        .addTo(M.layer);
+      bounds.push([p.pl.lat, p.pl.lon]);
+    });
     if (bounds.length > 1) M.map.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
     else if (bounds.length) M.map.setView(bounds[0], 12);
   }
 
-  function initMaps() {
-    Object.keys(maps).forEach((k) => { maps[k].map.remove(); delete maps[k]; });
-    const L = window.L;
-    view.querySelectorAll('.route-map[data-map]').forEach((box) => {
+  function flyTo(key, pl) {
+    const M = maps[key];
+    if (!M) return;
+    if (M.kind === 'kakao') {
+      M.map.setLevel(5);
+      M.map.panTo(new window.kakao.maps.LatLng(pl.lat, pl.lon));
+    } else M.map.flyTo([pl.lat, pl.lon], 14, { duration: 0.6 });
+  }
+
+  async function initMaps() {
+    Object.keys(maps).forEach((k) => { if (maps[k].kind === 'leaflet') maps[k].map.remove(); delete maps[k]; });
+    const boxes = [...view.querySelectorAll('.route-map[data-map]')];
+    if (!boxes.length) return;
+    const useKakao = await loadKakao();
+    const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    boxes.forEach((box) => {
+      if (!box.isConnected) return;
       const key = box.dataset.map;
       const el = box.querySelector('.lmap');
-      if (!L || !el) { box.classList.add('no-map'); return; }
-      const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-      const map = L.map(el, { scrollWheelZoom: false, dragging: !touch, tap: false, zoomControl: true, attributionControl: true });
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      }).addTo(map);
-      box.classList.toggle('dark-tiles', isDark());
-      if (touch) {
-        map.once('click', () => { map.dragging.enable(); box.classList.add('map-active'); });
-      } else box.classList.add('map-active');
-      maps[key] = { map, layer: L.layerGroup().addTo(map) };
+      if (useKakao) {
+        const K = window.kakao.maps;
+        const map = new K.Map(el, { center: new K.LatLng(33.38, 126.45), level: 10 });
+        map.addControl(new K.ZoomControl(), K.ControlPosition.RIGHT);
+        if (touch) {
+          map.setDraggable(false);
+          K.event.addListener(map, 'click', () => { map.setDraggable(true); box.classList.add('map-active'); });
+        } else box.classList.add('map-active');
+        box.classList.add('kakao-map');
+        maps[key] = { kind: 'kakao', map, items: [] };
+      } else {
+        const L = window.L;
+        if (!L || !el) { box.classList.add('no-map'); return; }
+        const map = L.map(el, { scrollWheelZoom: false, dragging: !touch, tap: false, zoomControl: true, attributionControl: true });
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        }).addTo(map);
+        box.classList.toggle('dark-tiles', isDark());
+        if (touch) {
+          map.once('click', () => { map.dragging.enable(); box.classList.add('map-active'); });
+        } else box.classList.add('map-active');
+        maps[key] = { kind: 'leaflet', map, layer: L.layerGroup().addTo(map) };
+      }
       drawMap(key);
     });
   }
@@ -535,7 +600,7 @@
       const [key, k] = fly.dataset.fly.split(':');
       const stop = T.days[Number(mapSel[key])].route[Number(k)];
       const pl = placeOf(stop.at);
-      if (maps[key]) maps[key].map.flyTo([pl.lat, pl.lon], 14, { duration: 0.6 });
+      flyTo(key, pl);
       return;
     }
     const zoom = e.target.closest('.item-photo img');
@@ -589,13 +654,16 @@
     const C = T.car;
     const carHTML = `<div class="card info-card">
       <h3>${esc(C.model)}</h3>
-      <p class="sub">운전 · ${esc(C.driver)}</p>
+      <p class="sub">${esc([C.company, C.detail, `운전 ${C.driver}`].filter(Boolean).join(' · '))}</p>
       <dl class="facts">
         <dt>인수</dt><dd>${esc(mdw(C.pickup.date))}${C.pickup.time ? ` ${esc(C.pickup.time)}` : ''}${C.pickup.place ? ` · ${esc(C.pickup.place)}` : ''}</dd>
         <dt>반납</dt><dd>${esc(mdw(C.return.date))}${C.return.time ? ` ${esc(C.return.time)}` : ''}${C.return.place ? ` · ${esc(C.return.place)}` : ''}</dd>
+        ${C.address ? `<dt>차고지</dt><dd>${esc(C.address)}</dd>` : ''}
+        ${C.insurance ? `<dt>보험</dt><dd>${esc(C.insurance)}</dd>` : ''}
         <dt>좌석</dt><dd>${esc(C.seats)}</dd>
       </dl>
       ${C.notes && C.notes.length ? `<ul class="bullets" style="margin-top:12px">${C.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+      ${naverLink(C.company)}
     </div>`;
 
     const W = T.weather;
