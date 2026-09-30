@@ -268,13 +268,13 @@ a { color: var(--sea-ink); }
 .pb b { font-weight: 600; letter-spacing: -.01em; }
 .pb small { font-size: .5625rem; font-weight: 600; opacity: .75; font-variant-numeric: tabular-nums; }
 .pb.tiny { font-size: .625rem; padding-block: 0; }
-.pb.tbd { background: var(--sunken); color: var(--muted); }
+.pb.tbd { background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line); }
 .pb.tbd b { font-weight: 500; }
-.k-fly { --kb: #DDE8F5; --kf: #2E4E77; }
-.k-move { --kb: #ECE7F7; --kf: #574787; }
-.k-meal { --kb: #FFE4CF; --kf: #974810; }
-.k-play { --kb: #D5EEE6; --kf: #0C5E54; }
-.k-rest { --kb: #F3ECDD; --kf: #72603A; }
+.k-fly { --kb: #CFE4FB; --kf: #1B4E8F; }
+.k-move { --kb: #E2D9FB; --kf: #4A2F93; }
+.k-meal { --kb: #FFD8C2; --kf: #A23D0A; }
+.k-play { --kb: #C6EED6; --kf: #0D6A40; }
+.k-rest { --kb: #FBEDB5; --kf: #735500; }
 .pb.has-photo {
   justify-content: flex-end; color: #fff;
   background: linear-gradient(to top, rgb(0 0 0 / .62), rgb(0 0 0 / .08) 70%), var(--ph) center / cover no-repeat, var(--kb);
@@ -292,22 +292,22 @@ a { color: var(--sea-ink); }
 }
 .pl-legend i { display: inline-flex; }
 .pl-legend svg { width: 13px; height: 13px; }
-.pl-legend .tbd { --kb: var(--sunken); --kf: var(--muted); }
+.pl-legend .tbd { --kb: var(--surface); --kf: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line); }
 .pl-legend .tbd i { display: none; }
 @media (max-width: 360px) { .pb { font-size: .625rem; } .pb svg { width: 12px; height: 12px; } .pb small { display: none; } }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .k-fly { --kb: #22324A; --kf: #B3CDEE; }
-  :root:not([data-theme="light"]) .k-move { --kb: #2C2742; --kf: #C9BEEB; }
-  :root:not([data-theme="light"]) .k-meal { --kb: #3E2A18; --kf: #F7BE8A; }
-  :root:not([data-theme="light"]) .k-play { --kb: #173A33; --kf: #92D9CB; }
-  :root:not([data-theme="light"]) .k-rest { --kb: #342F24; --kf: #DCCDA6; }
+  :root:not([data-theme="light"]) .k-fly { --kb: #1E3A5F; --kf: #B5D4FA; }
+  :root:not([data-theme="light"]) .k-move { --kb: #342A5A; --kf: #D3C6FA; }
+  :root:not([data-theme="light"]) .k-meal { --kb: #4A2A18; --kf: #FFBE98; }
+  :root:not([data-theme="light"]) .k-play { --kb: #15402B; --kf: #9BE3BB; }
+  :root:not([data-theme="light"]) .k-rest { --kb: #44391A; --kf: #F2DB8A; }
 }
-:root[data-theme="dark"] .k-fly { --kb: #22324A; --kf: #B3CDEE; }
-:root[data-theme="dark"] .k-move { --kb: #2C2742; --kf: #C9BEEB; }
-:root[data-theme="dark"] .k-meal { --kb: #3E2A18; --kf: #F7BE8A; }
-:root[data-theme="dark"] .k-play { --kb: #173A33; --kf: #92D9CB; }
-:root[data-theme="dark"] .k-rest { --kb: #342F24; --kf: #DCCDA6; }
+:root[data-theme="dark"] .k-fly { --kb: #1E3A5F; --kf: #B5D4FA; }
+:root[data-theme="dark"] .k-move { --kb: #342A5A; --kf: #D3C6FA; }
+:root[data-theme="dark"] .k-meal { --kb: #4A2A18; --kf: #FFBE98; }
+:root[data-theme="dark"] .k-play { --kb: #15402B; --kf: #9BE3BB; }
+:root[data-theme="dark"] .k-rest { --kb: #44391A; --kf: #F2DB8A; }
 
 /* ---------- 예약 요약 ---------- */
 .booking { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: start; }
