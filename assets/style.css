@@ -861,3 +861,36 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 .kakao-share:active { transform: scale(.96); }
 @media (hover: hover) { .kakao-share:hover { box-shadow: 0 8px 22px rgb(120 100 0 / .26); } }
 .view-in .kakao-share { animation: pop .45s var(--ease) 1s both; }
+
+/* =====================================================================
+   스크롤 효과 — 까딱까딱 태오 · 날아다니는 비행기
+   ===================================================================== */
+/* 사진 한 장으로 만든 컷 3개: 왼쪽 갸웃 → 좌우 반전 → 폴짝 */
+.inv-flip { display: block; width: 100%; transform-origin: 50% 90%; transition: transform .09s steps(2, end); }
+.inv-flip.f0 { transform: rotate(0); }
+.inv-flip.f1 { transform: rotate(-7deg); }
+.inv-flip.f2 { transform: scaleX(-1) rotate(-5deg) translateY(-6px); }
+.inv-photo .inv-flip img { width: 100%; max-width: 190px; margin-inline: auto; }
+
+.buddy {
+  position: fixed; right: 12px; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px); z-index: 8;
+  width: 56px; padding: 0; border: 0; background: none; cursor: pointer;
+  transform: translateY(24px) scale(.6); opacity: 0; pointer-events: none;
+  transition: transform .35s var(--ease), opacity .25s;
+}
+.buddy.show { transform: none; opacity: 1; pointer-events: auto; }
+.buddy.typing { opacity: 0; pointer-events: none; }
+.buddy img {
+  display: block; width: 100%; height: auto;
+  filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 6px 10px rgb(0 0 0 / .22));
+}
+@media (min-width: 760px) { .buddy { right: calc(50% - 360px + 12px); } }
+
+/* 시간표 위를 나는 비행기 */
+.planner-card { position: relative; overflow: hidden; }
+.pl-sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+.sky-trail { fill: none; stroke: var(--wx-rain); stroke-width: 2; stroke-dasharray: 1 7; stroke-linecap: round; opacity: .42; }
+.sky-plane { fill: var(--wx-rain); }
+.sky-plane.big { filter: drop-shadow(0 2px 3px rgb(0 0 0 / .18)); }
+.sky-plane.small { opacity: .45; }
+@media (prefers-reduced-motion: reduce) { .pl-sky, .buddy { display: none; } }

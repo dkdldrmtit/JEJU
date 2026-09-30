@@ -171,7 +171,7 @@
       </div>
       ${H.photo ? `<figure class="inv-photo">
         <p class="inv-bubble">${esc(H.bubble || '')}</p>
-        <img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="430" height="561" fetchpriority="high">
+        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="430" height="561" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
   }
@@ -289,7 +289,7 @@
     const legend = Object.entries(P.kinds).map(([k, name]) => `<span class="k-${k}"><i>${kindIcon(k)}</i>${esc(name)}</span>`).join('');
     return `<section class="block">
       <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">날짜를 누르면 자세히</span></div>
-      <div class="card planner-card">
+      <div class="card planner-card" data-sky>
         <div class="planner" style="--hours:${span}">
           <div class="pl-axis" aria-hidden="true">
             <span class="pl-head"></span>
@@ -1031,6 +1031,102 @@
     }
   }
 
+  /* ---------- 스크롤 효과: 까딱까딱 태오 · 날아다니는 비행기 ---------- */
+  const FRAMES = ['f0', 'f1', 'f2'];
+  let flipStep = 0;
+  let lastY = window.scrollY;
+  let travelled = 0;
+  let restTimer = null;
+
+  // 초대 카드가 화면 밖으로 나가면 오른쪽 아래에서 따라다니는 작은 태오
+  const buddy = document.createElement('button');
+  buddy.type = 'button';
+  buddy.className = 'buddy';
+  buddy.setAttribute('aria-label', '맨 위로');
+  if (T.hero && T.hero.photo) {
+    buddy.innerHTML = `<span class="inv-flip f0" data-flip><img src="${esc(T.hero.photo)}" alt="" width="430" height="561"></span>`;
+    document.body.appendChild(buddy);
+    buddy.addEventListener('click', () => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }));
+  }
+
+  function setFrame(step) {
+    document.querySelectorAll('[data-flip]').forEach((el) => {
+      el.classList.remove(...FRAMES);
+      el.classList.add(FRAMES[step % FRAMES.length]);
+    });
+  }
+
+  const PLANE = '<path d="M21 11.2 13.6 9.4 9.9 3.5H8.1l1.9 5.4-5.2-.6-1.6-2.2H1.9l1 3.9-1 3.9h1.3l1.6-2.2 5.2-.6-1.9 5.4h1.8l3.7-5.9 7.4-1.8a.9.9 0 0 0 0-1.6z"/>';
+  let sky = null;
+
+  function buildSky() {
+    sky = null;
+    const host = view.querySelector('[data-sky]');
+    if (!host || reduceMotion) return;
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    const d = `M -40 ${h * 0.12} C ${w * 0.45} ${-h * 0.02}, ${w * 0.05} ${h * 0.42}, ${w * 0.5} ${h * 0.46} S ${w * 1.05} ${h * 0.7}, ${w * 0.62} ${h * 0.82} S ${w * 0.2} ${h * 0.98}, ${w + 40} ${h * 0.95}`;
+    const d2 = `M ${w + 30} ${h * 0.05} C ${w * 0.7} ${h * 0.02}, ${w * 0.35} ${h * 0.09}, -30 ${h * 0.03}`;
+    let svg = host.querySelector('.pl-sky');
+    if (!svg) { svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'pl-sky'); svg.setAttribute('aria-hidden', 'true'); host.appendChild(svg); }
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.innerHTML = `<defs><mask id="sky-mask"><path class="sky-reveal" d="${d}" fill="none" stroke="#fff" stroke-width="8"/></mask></defs>
+      <path class="sky-trail" d="${d}" mask="url(#sky-mask)"/>
+      <g class="sky-plane big"><g transform="translate(-14 -14) scale(1.2)">${PLANE}</g></g>
+      <path class="sky-path2" d="${d2}" fill="none" stroke="none"/>
+      <g class="sky-plane small"><g transform="translate(-9 -9) scale(.75) translate(24 0) scale(-1 1)">${PLANE}</g></g>`;
+    const main = svg.querySelector('.sky-reveal');
+    sky = { host, svg, main, len: main.getTotalLength(), p2: svg.querySelector('.sky-path2'), big: svg.querySelector('.sky-plane.big'), small: svg.querySelector('.sky-plane.small') };
+    sky.len2 = sky.p2.getTotalLength();
+    main.style.strokeDasharray = `${sky.len} ${sky.len}`;
+    drawSky();
+  }
+
+  function planeAt(path, len, t) {
+    const a = path.getPointAtLength(Math.max(0, Math.min(len, len * t)));
+    const b = path.getPointAtLength(Math.max(0, Math.min(len, len * t + 1)));
+    return { x: a.x, y: a.y, deg: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI };
+  }
+
+  function drawSky() {
+    if (!sky || !sky.host.isConnected) return;
+    const r = sky.host.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const t = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)));
+    const eased = t * t * (3 - 2 * t);
+    const p = planeAt(sky.main, sky.len, eased);
+    sky.big.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${p.deg})`);
+    sky.main.style.strokeDashoffset = String(sky.len * (1 - eased));
+    const q = planeAt(sky.p2, sky.len2, Math.min(1, t * 1.6));
+    sky.small.setAttribute('transform', `translate(${q.x} ${q.y})`);
+  }
+
+  function onScroll() {
+    const y = window.scrollY;
+    travelled += Math.abs(y - lastY);
+    lastY = y;
+    if (!reduceMotion && travelled > 70) {
+      travelled = 0;
+      flipStep += 1;
+      setFrame(flipStep);
+      clearTimeout(restTimer);
+      restTimer = setTimeout(() => { flipStep = 0; setFrame(0); }, 450);
+    }
+    const inv = view.querySelector('.invite');
+    const heroGone = !inv || inv.getBoundingClientRect().bottom < 40;
+    buddy.classList.toggle('show', heroGone && y > 120);
+    drawSky();
+  }
+  let scrollQueued = false;
+  window.addEventListener('scroll', () => {
+    if (scrollQueued) return;
+    scrollQueued = true;
+    requestAnimationFrame(() => { scrollQueued = false; onScroll(); });
+  }, { passive: true });
+  window.addEventListener('resize', () => buildSky());
+  document.addEventListener('focusin', (e) => { if (e.target.matches('input, textarea, select')) buddy.classList.add('typing'); });
+  document.addEventListener('focusout', () => buddy.classList.remove('typing'));
+
   /* ---------- 탭 전환 ---------- */
   const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo };
   const currentTab = () => {
@@ -1052,6 +1148,7 @@
     updateTopbar();
     animateIn();
     if (view.querySelector('[data-share]')) loadKakaoShare();
+    requestAnimationFrame(() => { buildSky(); onScroll(); });
   }
 
   window.addEventListener('hashchange', () => {
