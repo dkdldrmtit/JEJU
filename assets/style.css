@@ -29,6 +29,7 @@
   --d6: #5E6E2C;
 
   --font-display: "Do Hyeon", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-cute: "Jua", "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
   --font-body: "IBM Plex Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
 
   --r-lg: 18px;
@@ -227,30 +228,73 @@ a { color: var(--sea-ink); }
 }
 .btn-link::after { content: "→"; }
 
-/* ---------- 홈: 6일 한눈에 ---------- */
-.ov { padding: 4px 0; display: grid; }
-.ov li + li .ov-row { border-top: 1px solid var(--line); }
-.ov-row {
-  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center;
-  padding: 11px 14px 11px 12px; color: var(--ink); text-decoration: none;
-  box-shadow: inset 4px 0 0 var(--dc);
+/* ---------- 홈: 6일 시간표 (방학 계획표) ---------- */
+.planner-card { position: relative; padding: 14px 10px 12px 6px; }
+.pl-sticker { position: absolute; right: -8px; top: -16px; width: 40px; height: 40px; transform: rotate(14deg); }
+.planner {
+  --hour: 28px;
+  display: grid; grid-template-columns: 24px repeat(6, minmax(0, 1fr)); column-gap: 3px;
+  font-family: var(--font-cute);
 }
-.ov-row.is-today { background: var(--tangerine-soft); }
-.ov-date { display: grid; justify-items: center; line-height: 1.1; }
-.ov-date b { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; color: var(--dc); font-variant-numeric: tabular-nums; }
-.ov-date span { font-size: .75rem; font-weight: 600; color: var(--muted); }
-.ov-main { display: grid; min-width: 0; }
-.ov-title { font-weight: 600; font-size: .9375rem; line-height: 1.4; }
-.ov-brief { font-size: .8125rem; color: var(--muted); line-height: 1.4; margin-top: 1px; }
-.ov-side { display: grid; justify-items: end; gap: 3px; }
-.ov-count { font-size: .8125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ov-dots { display: flex; gap: 2px; }
-.ov-dots i, .ov-legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--sea); display: inline-block; }
-.ov-dots i.b, .ov-legend i.b { background: var(--tangerine); }
-.ov-dots i.off { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
-.ov-stay { font-size: .6875rem; font-weight: 600; color: var(--muted); }
-.ov-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: .75rem; color: var(--muted); }
-.ov-legend i { margin-right: 5px; vertical-align: 1px; }
+.pl-col, .pl-axis { display: grid; grid-template-rows: 58px calc(var(--hours) * var(--hour)) auto; color: var(--ink); text-decoration: none; min-width: 0; }
+.pl-head { display: grid; justify-items: center; align-content: start; gap: 1px; line-height: 1.1; }
+.pl-head b {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--dc); color: var(--surface); font-weight: 400; font-size: 1rem; font-variant-numeric: tabular-nums;
+}
+.pl-head span { font-size: .75rem; color: var(--muted); }
+.pl-head em { font-style: normal; font-size: .6875rem; color: var(--ink); white-space: nowrap; }
+.pl-col.is-today .pl-head b { box-shadow: 0 0 0 3px var(--tangerine-soft); }
+.pl-body {
+  position: relative; border-radius: 8px;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px);
+  background-size: 100% var(--hour), 100% calc(var(--hour) / 2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.pl-axis .pl-body { background: none; box-shadow: none; }
+.pl-axis i {
+  position: absolute; right: 3px; transform: translateY(-50%);
+  font-style: normal; font-size: .625rem; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.pb {
+  position: absolute; left: 2px; right: 2px; overflow: hidden;
+  display: flex; align-items: flex-start; justify-content: center; text-align: center;
+  padding: 3px 2px; border-radius: 7px;
+  font-size: .6875rem; line-height: 1.15; word-break: keep-all; overflow-wrap: normal;
+  background: var(--kb); color: var(--kf); border: 1.5px solid var(--kf);
+}
+.pb.tiny { align-items: center; padding: 0 2px; font-size: .625rem; }
+@media (max-width: 360px) { .pb { font-size: .625rem; letter-spacing: -.02em; } }
+.pb.tbd {
+  border-style: dashed;
+  background: repeating-linear-gradient(-45deg, var(--kb) 0 5px, var(--surface) 5px 9px);
+}
+.k-fly { --kb: #D6E8FC; --kf: #1F5190; }
+.k-move { --kb: #E6E0F6; --kf: #56418E; }
+.k-meal { --kb: #FDE4C9; --kf: #9A4508; }
+.k-play { --kb: #D4F0E4; --kf: #0E6450; }
+.k-rest { --kb: #F4ECD6; --kf: #6F5B1C; }
+.pl-now { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--d5); border-radius: 1px; z-index: 2; }
+.pl-night { padding-top: 5px; text-align: center; font-size: .6875rem; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.pl-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 12px 0 0 6px; font-size: .75rem; color: var(--muted); font-family: var(--font-cute); }
+.pl-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--kb); border: 1.5px solid var(--kf); }
+.pl-legend i.tbd { --kb: var(--sunken); --kf: var(--muted); border-style: dashed; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .k-fly { --kb: #1C3452; --kf: #A9CDF5; }
+  :root:not([data-theme="light"]) .k-move { --kb: #2C2547; --kf: #CBBDF0; }
+  :root:not([data-theme="light"]) .k-meal { --kb: #402A15; --kf: #F8C28C; }
+  :root:not([data-theme="light"]) .k-play { --kb: #163B31; --kf: #93DDC5; }
+  :root:not([data-theme="light"]) .k-rest { --kb: #342E1B; --kf: #E1D098; }
+}
+:root[data-theme="dark"] .k-fly { --kb: #1C3452; --kf: #A9CDF5; }
+:root[data-theme="dark"] .k-move { --kb: #2C2547; --kf: #CBBDF0; }
+:root[data-theme="dark"] .k-meal { --kb: #402A15; --kf: #F8C28C; }
+:root[data-theme="dark"] .k-play { --kb: #163B31; --kf: #93DDC5; }
+:root[data-theme="dark"] .k-rest { --kb: #342E1B; --kf: #E1D098; }
 
 /* ---------- 예약 요약 ---------- */
 .booking { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: start; }

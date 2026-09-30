@@ -184,33 +184,52 @@
     </section>`;
   }
 
-  /* 6일 전체 일정표: 한 화면에 */
-  function overviewHTML(st) {
-    const rows = T.days.map((day, i) => {
-      const night = day.night ? stays.get(day.night) : null;
+  /* 6일 계획표: 가로는 날짜, 세로는 시간 (방학 계획표처럼) */
+  const toH = (t) => { const [h, m] = t.split(':').map(Number); return h + (m || 0) / 60; };
+
+  function plannerHTML(st) {
+    const P = T.planner;
+    const span = P.to - P.from;
+    const at = (h) => (((h - P.from) / span) * 100).toFixed(2);
+    const ticks = [];
+    for (let h = P.from; h <= P.to; h += 1) ticks.push(h);
+
+    const cols = T.days.map((day, i) => {
       const isToday = st.phase === 'during' && st.index === i;
-      const dots = T.groups.map((g) => membersOf(g.id).map(() => (
-        `<i class="${g.id}${day.date < g.arrive.date || day.date > g.depart.date ? ' off' : ''}"></i>`
-      )).join('')).join('');
-      return `<li>
-        <a class="ov-row${isToday ? ' is-today' : ''}" href="#plan" data-goto="day-${day.date}" style="--dc:var(--d${i + 1})">
-          <span class="ov-date"><b>${dom(day.date)}</b><span>${wd(day.date)}</span></span>
-          <span class="ov-main">
-            <span class="ov-title">${esc(day.title)}</span>
-            <span class="ov-brief">${esc(day.brief || '')}</span>
-          </span>
-          <span class="ov-side">
-            <span class="ov-count">${headcount(day.date)}</span>
-            <span class="ov-dots" aria-hidden="true">${dots}</span>
-            <span class="ov-stay">${esc(night ? night.short : '집')}</span>
-          </span>
-        </a>
-      </li>`;
+      const blocks = (day.blocks || []).map(([a, b, label, kind, tbd]) => {
+        const len = toH(b) - toH(a);
+        const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : ''].filter(Boolean).join(' ');
+        return `<span class="${cls}" style="top:${at(toH(a))}%;height:${(((toH(b) - toH(a)) / span) * 100).toFixed(2)}%" title="${esc(`${a}–${b} ${label}`)}">${esc(label)}</span>`;
+      }).join('');
+      let now = '';
+      if (isToday) {
+        const d = new Date();
+        const h = d.getHours() + d.getMinutes() / 60;
+        if (h >= P.from && h <= P.to) now = `<span class="pl-now" style="top:${at(h)}%"></span>`;
+      }
+      const night = day.night ? stays.get(day.night).short : '집으로';
+      return `<a class="pl-col${isToday ? ' is-today' : ''}" href="#plan" data-goto="day-${day.date}" style="--dc:var(--d${i + 1})" aria-label="${esc(`${mdw(day.date)} ${day.title}`)}">
+        <span class="pl-head"><b>${dom(day.date)}</b><span>${wd(day.date)}</span><em>${headcount(day.date)}</em></span>
+        <span class="pl-body">${blocks}${now}</span>
+        <span class="pl-night">${esc(night)}</span>
+      </a>`;
     }).join('');
+
+    const legend = Object.entries(P.kinds).map(([k, name]) => `<span><i class="k-${k}"></i>${esc(name)}</span>`).join('');
     return `<section class="block">
-      <div class="h-row"><h2 class="h">한눈에 보는 6일</h2><span class="count">누르면 자세히</span></div>
-      <ol class="card ov">${rows}</ol>
-      <p class="ov-legend"><span><i class="a"></i>${esc(T.groups[0].name)}</span><span><i class="b"></i>${esc(T.groups[1].name)}</span></p>
+      <div class="h-row"><h2 class="h">우리의 제주 시간표</h2><span class="count">칸을 누르면 자세히</span></div>
+      <div class="card planner-card">
+        ${ICON.mandarin.replace('hero-mandarin', 'pl-sticker')}
+        <div class="planner" style="--hours:${span}">
+          <div class="pl-axis" aria-hidden="true">
+            <span class="pl-head"></span>
+            <span class="pl-body">${ticks.map((h) => `<i style="top:${at(h)}%">${h}</i>`).join('')}</span>
+            <span class="pl-night"></span>
+          </div>
+          ${cols}
+        </div>
+        <p class="pl-legend">${legend}<span><i class="tbd"></i>미정</span></p>
+      </div>
     </section>`;
   }
 
@@ -381,7 +400,7 @@
 
   function renderHome() {
     const st = tripState();
-    return heroHTML(st) + nowHTML(st) + overviewHTML(st) + routeMapHTML('home', '동선 지도') + bookingsHTML() + todoHTML();
+    return heroHTML(st) + nowHTML(st) + plannerHTML(st) + routeMapHTML('home', '동선 지도') + bookingsHTML() + todoHTML();
   }
 
   /* ---------- 일정 ---------- */
