@@ -207,8 +207,12 @@ window.TRIP = {
   ],
 
   /* 사진: assets/photos/ 에 파일을 넣고 여기 등록하면, 같은 이름을 쓰는 일정에 자동으로 붙어요.
-     예) shilla: { src: 'assets/photos/shilla.jpg', alt: '신라호텔 수영장' } */
-  photos: {},
+     예) shilla: { src: 'assets/photos/shilla.jpg', pos: '16% 50%', alt: '신라호텔 수영장' } */
+  photos: {
+    shilla: { src: 'assets/photos/shilla.jpg', pos: '16% 50%', alt: '신라호텔 제주 야외 수영장', credit: '신라호텔 제주 공식 홈페이지' },
+    somerset: { src: 'assets/photos/somerset.jpg', pos: '8% 50%', alt: '서머셋 제주신화월드 3베드룸 거실', credit: '트립닷컴 투숙객 사진' },
+    aria: { src: 'assets/photos/aria.jpg', pos: '45% 55%', alt: '그랜드 조선 제주 아리아 뷔페', credit: '그랜드 조선 제주 공식 홈페이지' },
+  },
 
   /* 홈 계획표 */
   planner: {

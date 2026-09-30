@@ -277,7 +277,7 @@ a { color: var(--sea-ink); }
 .k-rest { --kb: #FBEDB5; --kf: #735500; }
 .pb.has-photo {
   justify-content: flex-end; color: #fff;
-  background: linear-gradient(to top, rgb(0 0 0 / .62), rgb(0 0 0 / .08) 70%), var(--ph) center / cover no-repeat, var(--kb);
+  background: linear-gradient(to top, rgb(0 0 0 / .6), rgb(0 0 0 / 0) 45%), var(--ph) var(--pp, center) / cover no-repeat, var(--kb);
   text-shadow: 0 1px 2px rgb(0 0 0 / .35);
 }
 .pb.has-photo svg { display: none; }
