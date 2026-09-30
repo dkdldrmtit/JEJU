@@ -41,6 +41,16 @@
     mandarin: '<svg class="hero-mandarin" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="31" r="19" fill="var(--tangerine)"/><circle cx="20.5" cy="25" r="4.5" fill="var(--basalt-ink)" opacity=".2"/><path d="M27 13.5V9" stroke="var(--basalt-ink)" stroke-width="2.2" stroke-linecap="round"/><path d="M27.5 10.5c1.8-4.2 6.3-6.3 10.5-5.2-1.6 4.2-6.2 6.4-10.5 5.2z" fill="var(--sea)"/></svg>',
   };
 
+  /* 시간표 블록 아이콘 */
+  const KIND_ICON = {
+    fly: '<path d="M10.5 13.5 3 11l1.5-1.5 7 1L16 6a2.1 2.1 0 0 1 3 3l-4.5 4.5 1 7L14 22l-2.5-7.5"/>',
+    move: '<path d="M5 16V10l2-4h10l2 4v6"/><path d="M4 16h16v3H4z"/><circle cx="8" cy="19" r="1"/><circle cx="16" cy="19" r="1"/>',
+    meal: '<path d="M8 3v7a2 2 0 0 0 2 2v9"/><path d="M12 3v7a2 2 0 0 1-2 2"/><path d="M17 21V3c-2 1.5-3 4-3 7s1 4 3 4"/>',
+    play: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+    rest: '<path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M9 3.5c0 1 1 1.5 1 2.5M12.5 3.5c0 1 1 1.5 1 2.5"/>',
+  };
+  const kindIcon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIND_ICON[k] || ''}</svg>`;
+
   const pill = (s) => (s && STATUS[s] ? `<span class="pill ${s}">${STATUS[s]}</span>` : '');
 
   /* 지도 링크는 네이버 지도 하나로 */
@@ -200,7 +210,7 @@
       const blocks = (day.blocks || []).map(([a, b, label, kind, tbd]) => {
         const len = toH(b) - toH(a);
         const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : ''].filter(Boolean).join(' ');
-        return `<span class="${cls}" style="top:${at(toH(a))}%;height:${((len / span) * 100).toFixed(2)}%" title="${esc(`${a}–${b} ${label}`)}">${len >= 1.5 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}<b>${esc(label)}</b></span>`;
+        return `<span class="${cls}" style="top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)" title="${esc(`${a}–${b} ${label}`)}">${len >= 1.5 && !tbd ? kindIcon(kind) : ''}<b>${esc(label)}</b>${len >= 1.8 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}</span>`;
       }).join('');
       let now = '';
       if (isToday) {
@@ -216,7 +226,7 @@
       </a>`;
     }).join('');
 
-    const legend = Object.entries(P.kinds).map(([k, name]) => `<span class="k-${k}"><i></i>${esc(name)}</span>`).join('');
+    const legend = Object.entries(P.kinds).map(([k, name]) => `<span class="k-${k}"><i>${kindIcon(k)}</i>${esc(name)}</span>`).join('');
     return `<section class="block">
       <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">날짜를 누르면 자세히</span></div>
       <div class="card planner-card">
