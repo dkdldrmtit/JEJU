@@ -221,6 +221,13 @@ window.TRIP = {
     aria: { src: 'assets/photos/aria.jpg', pos: '45% 55%', alt: '그랜드 조선 제주 아리아 뷔페', credit: '그랜드 조선 제주 공식 홈페이지' },
   },
 
+  /* 업데이트 소식: 사이트가 바뀔 때마다 위에 한 줄씩 추가 (AI 반영 포함) */
+  updates: [
+    { date: '2026-10-01', text: '동선 지도를 카카오맵으로 바꿨어요' },
+    { date: '2026-10-01', text: '렌터카(제주엔젤카) 정보와 차고지 동선을 넣었어요' },
+    { date: '2026-09-30', text: '13일 점심 아리아 뷔페로 확정했어요' },
+  ],
+
   /* 가족 의견: backend/README.md 대로 구글 Apps Script 를 배포하고 웹 앱 주소를 endpoint 에 넣어요 */
   feedback: {
     endpoint: 'https://script.google.com/macros/s/AKfycbyFcO9LElmdKJIfUcNvp5CCofH3mlB7fm1WiXSsPIdy1gaCR1q8PU2BEaMhyCQE7ZPU/exec',
@@ -364,6 +371,9 @@ window.TRIP = {
   ],
 
   weather: {
+    /* 예보는 사이트를 열 때 Open-Meteo 에서 받아와요 (서머셋 근처 기준). 못 받으면 평년값 */
+    point: { lat: 33.30, lon: 126.32 },
+    normal: { max: 22, min: 16 },
     title: '10월 중순 제주',
     facts: [
       ['낮', '22°C 안팎 (서귀포)'],
@@ -371,7 +381,7 @@ window.TRIP = {
       ['비', '10월 평균 6일쯤 와요'],
       ['바람', '바닷가는 바람이 센 날이 많아요'],
     ],
-    tip: '아기는 얇은 옷을 여러 겹 입히고 바람막이를 챙기세요. 출발 열흘 전쯤부터 중기예보를 볼게요.',
+    tip: '아기는 얇은 옷을 여러 겹 입히고 바람막이를 챙기세요. 날짜별 예보는 사이트를 열 때마다 새로 받아와요.',
     src: { name: '기상청 날씨누리에서 예보 보기', url: 'https://www.weather.go.kr/w/index.do' },
   },
 
