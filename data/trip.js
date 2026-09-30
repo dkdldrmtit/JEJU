@@ -36,9 +36,9 @@ window.TRIP = {
     {
       id: 'b',
       name: '할아버지 · 할머니 · 선미 · 범준',
-      arrive: { date: '2026-10-12', time: null, approx: '저녁', flight: null },
-      depart: { date: '2026-10-15', time: null, flight: null },
-      tip: '12일엔 민석이 공항으로 마중 나가요. 도착하면 단톡방에 알려주세요.',
+      arrive: { date: '2026-10-12', time: '21:40', flight: '이스타항공 ZE715 · 청주 20:30 출발' },
+      depart: { date: '2026-10-15', time: '15:10', flight: '아시아나 OZ8234 · 청주 16:20 도착' },
+      tip: '12일 밤엔 민석이 공항으로 마중 나가요. 이스타항공 부치는 짐은 1인 15kg이에요. 15일엔 출발 1시간 전(14:10쯤)까지 공항에 가요.',
     },
   ],
 
@@ -56,7 +56,6 @@ window.TRIP = {
       notes: [
         '아기침대는 미리 요청해야 해요 (수량 한정)',
         '온수 야외 가족 수영장이 있어요',
-        '호텔 아래로 색달해변 산책길',
       ],
     },
     {
@@ -103,7 +102,8 @@ window.TRIP = {
   todo: [
     { text: '숙소 예약 (신라호텔 · 서머셋)', done: true },
     { text: '렌터카 예약 (카니발 하이리무진)', done: true },
-    { text: '항공편 정보 모으기', note: '7명 편명 · 도착/출발 시간', done: false },
+    { text: '후발대 항공편 정리', note: '12일 ZE715 21:40 도착 · 15일 OZ8234 15:10 출발', done: true },
+    { text: '민석 · 시윤 · 태오 항공편 정리', note: '11일 가는 편 · 16일 오는 편', done: false },
     { text: '아리아 뷔페 날짜 정하고 예약', note: '13일(화) 또는 14일(수) · 점심 12:00–14:30', done: false },
     { text: '서머셋 투숙 인원 확인', note: '어른 6명 + 아기 1명으로 등록돼 있는지', done: false },
     { text: '아기침대 요청 (신라 · 서머셋)', note: '미리 신청해야 하고 수량이 적어요', done: false },
@@ -125,24 +125,26 @@ window.TRIP = {
   days: [
     {
       date: '2026-10-11',
-      title: '먼저 출발 · 신라호텔에서 하루',
+      title: '먼저 출발 · 신라호텔에서만 하루',
       night: 'shilla',
       items: [
         { time: null, title: '제주공항 도착', status: 'ok', who: 'a', note: '항공편 정해지면 시간 채울게요' },
         { time: null, when: '도착 후', title: '렌터카 인수', status: 'ok', note: '카니발 하이리무진 · 카시트 설치 확인' },
         { time: '15:00', title: '신라호텔 제주 체크인', status: 'ok', place: '제주신라호텔' },
-        { time: null, when: '오후', title: '호텔에서 놀기', status: 'plan', note: '온수 야외 수영장 · 색달해변 산책' },
+        { time: null, when: '오후', title: '호텔 안에서 쉬고 놀기', status: 'ok', note: '이날은 신라호텔 밖으로 안 나가요 · 온수 야외 수영장' },
       ],
     },
     {
       date: '2026-10-12',
-      title: '서머셋으로 이동 · 저녁에 가족 합류',
+      title: '서머셋으로 이동 · 밤에 가족 합류',
       night: 'somerset',
       items: [
         { time: '11:00', title: '신라호텔 체크아웃', status: 'ok' },
         { time: null, when: '낮', title: '점심 · 산책', status: 'tbd', note: '후보: 오설록 티뮤지엄, 카멜리아힐 (신화월드에서 10분 안팎)' },
         { time: '15:00', title: '서머셋 제주신화월드 체크인', status: 'ok', place: '서머셋 제주신화월드' },
-        { time: null, when: '저녁', title: '공항 마중 · 할아버지 · 할머니 · 선미 · 범준 도착', status: 'ok', note: '신화월드 ↔ 공항 차로 약 40분 (33km)' },
+        { time: '21:00', title: '숙소에서 공항으로 출발', status: 'plan', note: '신화월드 → 공항 차로 약 40분 (33km)' },
+        { time: '21:40', title: '할아버지 · 할머니 · 선미 · 범준 제주 도착', status: 'ok', note: '이스타항공 ZE715 (청주 20:30 출발) · 저녁은 비행기 타기 전에 먹고 오기' },
+        { time: '22:40', title: '다 같이 서머셋 도착', status: 'plan', note: '늦은 시간이라 짐 풀고 바로 쉬어요' },
       ],
     },
     {
@@ -162,9 +164,12 @@ window.TRIP = {
       title: '할아버지 · 할머니 · 선미 · 범준 먼저 출발',
       night: 'somerset',
       items: [
-        { time: null, title: '공항 배웅', status: 'ok', who: 'b', note: '비행기 시간 2시간 전쯤 숙소에서 출발 (차로 약 40분)' },
+        { time: null, when: '오전', title: '숙소 근처에서 가볍게 · 이른 점심', status: 'tbd', note: '짐은 아침에 미리 싸두기' },
+        { time: '13:20', title: '숙소에서 공항으로 출발', status: 'plan', who: 'all', note: '차로 약 40분' },
+        { time: '14:10', title: '공항 도착 · 짐 부치기', status: 'plan', note: '출발 1시간 전' },
+        { time: '15:10', title: '할아버지 · 할머니 · 선미 · 범준 출발', status: 'ok', note: '아시아나 OZ8234 → 청주 16:20 도착' },
       ],
-      open: '배웅 전후 일정은 비행기 시간 보고 정해요.',
+      open: '배웅하고 민석 · 시윤 · 태오는 숙소로 돌아가요.',
     },
     {
       date: '2026-10-16',
