@@ -223,8 +223,8 @@ window.TRIP = {
 
   /* 가족 의견: backend/README.md 대로 구글 Apps Script 를 배포하고 웹 앱 주소를 endpoint 에 넣어요 */
   feedback: {
-    endpoint: '',
-    aiOn: false, // AI 자동 조사를 켜면 true (의견 아래 'AI가 곧 찾아볼게요' 표시)
+    endpoint: 'https://script.google.com/macros/s/AKfycbyFcO9LElmdKJIfUcNvp5CCofH3mlB7fm1WiXSsPIdy1gaCR1q8PU2BEaMhyCQE7ZPU/exec',
+    aiOn: true, // AI 자동 조사를 켜면 true (의견 아래 'AI가 곧 찾아볼게요' 표시)
   },
 
   /* 홈 계획표 */
