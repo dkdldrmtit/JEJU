@@ -338,7 +338,7 @@
         const sc = document.createElement('script');
         sc.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(T.map.kakaoKey)}&autoload=false`;
         // 도메인 미등록 등으로 키가 거부되면 SDK 대신 오류 JSON 이 와서 kakao 가 안 생김 → OpenStreetMap 으로
-        const fail = setTimeout(() => resolve(false), 8000);
+        const fail = setTimeout(() => resolve(false), 20000);
         sc.onload = () => {
           if (window.kakao && window.kakao.maps && window.kakao.maps.load) window.kakao.maps.load(() => { clearTimeout(fail); resolve(true); });
           else { clearTimeout(fail); resolve(false); }
@@ -376,7 +376,7 @@
     return { lines, pins };
   }
 
-  const pinHTML = (p) => `<div class="kpin"><span class="${p.dot ? 'dot' : ''}" style="--c:${p.color}">${esc(p.label)}</span><em>${esc(p.pl.name)}</em></div>`;
+  const pinHTML = (p) => `<div class="kpin${p.pl.labelSide === 'left' ? ' left' : ''}"><span class="${p.dot ? 'dot' : ''}" style="--c:${p.color}">${esc(p.label)}</span><em>${esc(p.pl.name)}</em></div>`;
 
   function numIcon(label, color) {
     return window.L.divIcon({ className: 'pin', html: `<span style="--c:${color}">${esc(label)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] });
@@ -418,7 +418,7 @@
         ? L.divIcon({ className: 'pin dot', html: '<span></span>', iconSize: [14, 14], iconAnchor: [7, 7] })
         : numIcon(p.label, p.color);
       L.marker([p.pl.lat, p.pl.lon], { icon })
-        .bindTooltip(p.pl.name, { permanent: true, direction: 'right', offset: [p.dot ? 8 : 12, 0], className: 'pin-tip' })
+        .bindTooltip(p.pl.name, { permanent: true, direction: p.pl.labelSide === 'left' ? 'left' : 'right', offset: [(p.dot ? 8 : 12) * (p.pl.labelSide === 'left' ? -1 : 1), 0], className: 'pin-tip' })
         .addTo(M.layer);
       bounds.push([p.pl.lat, p.pl.lon]);
     });
