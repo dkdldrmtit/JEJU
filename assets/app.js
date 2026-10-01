@@ -171,7 +171,7 @@
       </div>
       ${H.photo ? `<figure class="inv-photo">
         <p class="inv-bubble">${esc(H.bubble || '')}</p>
-        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="600" height="739" fetchpriority="high"></span>
+        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="600" height="736" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
   }

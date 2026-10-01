@@ -14,7 +14,7 @@ window.TRIP = {
   share: {
     title: '태오가 보내는 초대장',
     text: '태오랑 제주 여행 가요! 10.11(일) – 10.16(금) 5박 6일, 일곱 식구가 제주에서 만나요.',
-    image: 'https://dkdldrmtit.github.io/JEJU/assets/og-taeo-gyul2.jpg',
+    image: 'https://dkdldrmtit.github.io/JEJU/assets/og-taeo-gyul3.jpg',
     button: '초대장 열기',
   },
   /* 홈 맨 위 초대 카드 */

@@ -22,7 +22,7 @@
 
 - `assets/app.js` — 데이터를 화면으로 그리는 코드
 - `assets/style.css` — 디자인
-- `assets/og-taeo-gyul2.jpg` — 카카오톡에 링크 보낼 때 뜨는 미리보기 그림
+- `assets/og-taeo-gyul3.jpg` — 카카오톡에 링크 보낼 때 뜨는 미리보기 그림
 
 ## GitHub Pages로 공개하기
 
