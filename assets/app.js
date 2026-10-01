@@ -853,12 +853,43 @@
   }
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '링크'; } };
 
+  // AI 답 정리: 첫 줄 = 한 줄 요약, "- 라벨: 내용" = 항목, "> " = 팁
+  // 날짜 항목(예: "11일(일): 맑음 · 16–27°")에는 날씨 아이콘을 붙임
+  function aiWx(label, value) {
+    if (!/^\d{1,2}일/.test(label)) return '';
+    value = value.split(/[·,]/)[0]; // "비 13%" 같은 강수확률은 빼고 날씨 말만 봄
+    const t = /뇌우|천둥/.test(value) ? 'storm' : /비|소나기/.test(value) ? 'rain' : /안개/.test(value) ? 'fog'
+      : /흐림|흐리/.test(value) ? 'cloud' : /구름/.test(value) ? 'partly' : /맑/.test(value) ? 'sun' : '';
+    return t ? WX_ICON[t] : '';
+  }
+  function aiHTML(text) {
+    const lines = String(text).split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    let head = '';
+    const rows = [];
+    const tips = [];
+    const paras = [];
+    lines.forEach((l, i) => {
+      if (/^[-•·]\s*/.test(l) && !/^[-•·]\s*$/.test(l)) {
+        const body = l.replace(/^[-•·]\s*/, '');
+        const m = /^([^:：]{1,14})[:：]\s*(.+)$/.exec(body);
+        rows.push(m ? { k: m[1].trim(), v: m[2].trim() } : { k: '', v: body });
+      } else if (/^>\s*/.test(l)) tips.push(l.replace(/^>\s*/, ''));
+      else if (i === 0 && lines.length > 1) head = l;
+      else paras.push(l);
+    });
+    return `${head ? `<p class="fb-ai-head">${esc(head)}</p>` : ''}${paras.map((p) => `<p>${esc(p)}</p>`).join('')}${
+      rows.length ? `<ul class="fb-ai-list">${rows.map((r) => (r.k
+        ? `<li><b>${aiWx(r.k, r.v)}${esc(r.k)}</b><span>${esc(r.v)}</span></li>`
+        : `<li class="solo"><span>${esc(r.v)}</span></li>`)).join('')}</ul>` : ''}${
+      tips.map((t) => `<p class="fb-ai-tip">${esc(t)}</p>`).join('')}`;
+  }
+
   function fbItemHTML(it, showDay) {
     const safeLink = /^https?:\/\//.test(it.link || '') ? it.link : '';
     let aiBox = '';
     if (it.ai) {
       const al = it.aiLink || '';
-      aiBox = `<div class="fb-ai"><span class="fb-ai-tag">✦ AI가 찾아봤어요</span><p>${esc(it.ai)}</p>${
+      aiBox = `<div class="fb-ai"><span class="fb-ai-tag">✦ AI가 찾아봤어요</span>${aiHTML(it.ai)}${
         /^https?:\/\//.test(al) ? `<a class="fb-link" href="${esc(al)}" target="_blank" rel="noopener">자세히 · ${esc(hostOf(al))}</a>` : naverLink(al, true)}</div>`;
     } else if (FB.aiOn) aiBox = '<p class="fb-ai-wait">✦ AI가 곧 찾아볼게요</p>';
     return `<li class="fb-item">
