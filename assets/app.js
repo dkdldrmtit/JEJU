@@ -171,7 +171,7 @@
       </div>
       ${H.photo ? `<figure class="inv-photo">
         <p class="inv-bubble">${esc(H.bubble || '')}</p>
-        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="430" height="631" fetchpriority="high"></span>
+        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="430" height="561" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
   }
@@ -1086,7 +1086,7 @@
             <path class="fp-tail" d="M14 66 L 8 40 Q 7 33 14 34 Q 20 35 24 40 L 34 60 Z"/>
             <path class="fp-heart" d="M15.5 45.2 c-1.6-1.5-4-0.4-3.6 1.6 0.3 1.5 2.2 2.8 3.6 3.8 1.4-1 3.3-2.3 3.6-3.8 0.4-2-2-3.1-3.6-1.6z"/>
             <path class="fp-wing far" d="M58 66 L 70 52 Q 73 49 77 51 L 80 53 L 74 68 Z"/>
-            <image class="fp-taeo" href="${esc(T.hero.photo)}" x="24" y="-12" width="70" height="103" preserveAspectRatio="xMidYMin meet"/>
+            <image class="fp-taeo" href="${esc(T.hero.photo)}" x="27" y="-4" width="62" height="81" preserveAspectRatio="xMidYMin meet"/>
             <rect class="fp-hull" x="10" y="60" width="92" height="34" rx="17"/>
             <path class="fp-belly" d="M22 84 L 92 84 Q 88 92 82 93 L 28 93 Q 22 90 22 84 Z"/>
             <path class="fp-nose" d="M92 61.5 Q 104 62 105 77 Q 104 92 92 92.5 Z"/>
