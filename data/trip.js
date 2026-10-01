@@ -14,7 +14,7 @@ window.TRIP = {
   share: {
     title: '태오가 보내는 초대장',
     text: '태오랑 제주 여행 가요! 10.11(일) – 10.16(금) 5박 6일, 일곱 식구가 제주에서 만나요.',
-    image: 'https://dkdldrmtit.github.io/JEJU/assets/og-taeo-gyul.jpg',
+    image: 'https://dkdldrmtit.github.io/JEJU/assets/og-taeo-gyul2.jpg',
     button: '초대장 열기',
   },
   /* 홈 맨 위 초대 카드 */
@@ -24,6 +24,7 @@ window.TRIP = {
     note: '5박 6일, 일곱 식구가 제주에서 만나요',
     bubble: '우리 같이 여행해요!',
     photo: 'assets/photos/taeo-gyul.webp',
+    plane: 'assets/photos/taeo-plane.webp', // 스크롤하면 따라 날아다니는 비행기 탄 태오
     alt: '감귤 모자와 주황 니트를 입고 활짝 웃는 태오',
   },
   start: '2026-10-11',

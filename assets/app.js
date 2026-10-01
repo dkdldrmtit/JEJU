@@ -171,7 +171,7 @@
       </div>
       ${H.photo ? `<figure class="inv-photo">
         <p class="inv-bubble">${esc(H.bubble || '')}</p>
-        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="319" height="467" fetchpriority="high"></span>
+        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="600" height="739" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
   }
@@ -1071,41 +1071,22 @@
   let restTimer = null;
 
   // 초대 카드가 화면 밖으로 나가면, 비행기를 탄 태오가 스크롤을 따라 화면 아래쪽을 날아다님
-  const FLY_W = 116;
-  const FLY_H = 104;
+  // 비행기 탄 태오 사진 (오른쪽을 보고 있음, 420×335)
+  const FLY_W = 136;
+  const FLY_H = 108;
   const flyer = document.createElement('div');
   flyer.className = 'flyer';
   flyer.setAttribute('aria-hidden', 'true');
   const fly = { x: -FLY_W, dir: 1, dist: 0, puff: 0 };
-  // 동글동글한 작은 비행기 + 큰 태오 얼굴 (머리가 비행기보다 살짝 커 보이게)
-  if (T.hero && T.hero.photo) {
+  const planeSrc = (T.hero && T.hero.plane) || '';
+  if (planeSrc) {
     flyer.innerHTML = `<button type="button" class="fly-plane" tabindex="-1" aria-label="맨 위로">
-      <span class="fly-turn">
-        <svg viewBox="0 0 ${FLY_W} ${FLY_H}" width="${FLY_W}" height="${FLY_H}">
-          <g class="fly-body">
-            <path class="fp-tail" d="M14 66 L 8 40 Q 7 33 14 34 Q 20 35 24 40 L 34 60 Z"/>
-            <path class="fp-heart" d="M15.5 45.2 c-1.6-1.5-4-0.4-3.6 1.6 0.3 1.5 2.2 2.8 3.6 3.8 1.4-1 3.3-2.3 3.6-3.8 0.4-2-2-3.1-3.6-1.6z"/>
-            <path class="fp-wing far" d="M58 66 L 70 52 Q 73 49 77 51 L 80 53 L 74 68 Z"/>
-            <clipPath id="fp-seat"><rect x="0" y="-40" width="${FLY_W}" height="120"/></clipPath>
-            <image class="fp-taeo" clip-path="url(#fp-seat)" href="${esc(T.hero.photo)}" x="20" y="-8" width="80" height="117" preserveAspectRatio="xMidYMin meet"/>
-            <rect class="fp-hull" x="10" y="60" width="92" height="34" rx="17"/>
-            <path class="fp-belly" d="M22 84 L 92 84 Q 88 92 82 93 L 28 93 Q 22 90 22 84 Z"/>
-            <path class="fp-nose" d="M92 61.5 Q 104 62 105 77 Q 104 92 92 92.5 Z"/>
-            <circle class="fp-win" cx="24" cy="72" r="3.4"/>
-            <circle class="fp-win" cx="36" cy="72" r="3.4"/>
-            <ellipse class="fp-cheek" cx="84" cy="76" rx="4" ry="2.4"/>
-            <path class="fp-wing near" d="M44 80 L 58 99 Q 60 102 64 102 L 70 102 Q 73 102 72 99 L 64 80 Z"/>
-            <g class="fp-prop"><ellipse cx="108" cy="77" rx="2.4" ry="15"/></g>
-            <circle class="fp-hub" cx="106.5" cy="77" r="3"/>
-          </g>
-        </svg>
-      </span>
+      <span class="fly-turn"><img class="fly-body" src="${esc(planeSrc)}" alt="" width="${FLY_W}" height="${FLY_H}" loading="lazy" decoding="async"></span>
     </button>`;
     document.body.appendChild(flyer);
     flyer.querySelector('.fly-plane').addEventListener('click', () => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }));
   }
   const flyPlane = flyer.querySelector('.fly-plane');
-  const flyTaeo = flyer.querySelector('.fp-taeo');
 
   function setFlyDir(dir) {
     fly.dir = dir;
@@ -1113,7 +1094,7 @@
   }
 
   function moveFlyer(dy) {
-    if (!flyTaeo || !dy) return;
+    if (!flyPlane || !dy) return;
     const box = flyer.clientWidth || window.innerWidth;
     const dir = dy > 0 ? 1 : -1;
     if (dir !== fly.dir) setFlyDir(dir);
@@ -1133,9 +1114,9 @@
     if (flyer.querySelectorAll('.puff').length > 7) return;
     const el = document.createElement('i');
     el.className = 'puff';
-    const tailX = fly.dir > 0 ? fly.x + 12 : fly.x + FLY_W - 12;
+    const tailX = fly.dir > 0 ? fly.x + 10 : fly.x + FLY_W - 10;
     el.style.left = `${tailX}px`;
-    el.style.bottom = `${40 - lift}px`;
+    el.style.bottom = `${48 - lift}px`;
     el.style.setProperty('--dx', `${-fly.dir * 22}px`);
     flyer.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
