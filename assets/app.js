@@ -838,6 +838,7 @@
   const NAME_KEY = 'jeju2026.name';
   let fbItems = null;
   let fbOpen = null;
+  let fbExpanded = false; // 홈 의견함: 처음엔 접어서 한 줄씩만
   const fbDays = () => T.days.filter((d) => d.open).map((d) => d.date);
   const savedName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } };
   const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* 무시 */ } };
@@ -928,6 +929,16 @@
       : list.length
         ? `<ul class="fb-list">${list.map((it) => fbItemHTML(it, day === 'all' || day === 'home')).join('')}</ul>`
         : `<p class="fb-empty">${day === 'all' || day === 'home' ? '아직 의견이 없어요. 첫 의견을 남겨주세요!' : '이날 하고 싶은 게 있으면 남겨주세요.'}</p>`;
+    if (day === 'home' && list.length) {
+      // 접힌 상태: 이름 · 한 줄 미리보기 · AI 답 표시만. 누르면 펼쳐짐
+      const rows = fbExpanded
+        ? items
+        : `<ul class="fb-list compact">${list.map((it) => `<li><button type="button" class="fb-row" data-fb-expand>
+            <b>${esc(it.name || '누군가')}</b><span class="fb-snip">${esc(it.text)}</span>
+            ${it.ai ? '<span class="fb-badge">✦ AI 답</span>' : (FB.aiOn ? '<span class="fb-badge wait">확인 중</span>' : '')}</button></li>`).join('')}</ul>`;
+      const toggle = `<button type="button" class="fb-more" ${fbExpanded ? 'data-fb-collapse aria-expanded="true"' : 'data-fb-expand aria-expanded="false"'}>${fbExpanded ? '접기' : '자세히 보기'}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>`;
+      return `${rows}${fbOpen === day ? fbFormHTML(day) : `<div class="fb-bar">${toggle}<button type="button" class="fb-open" data-fb-open="${day}">＋ 의견 남기기</button></div>`}`;
+    }
     return `${items}${fbOpen === day ? fbFormHTML(day) : `<button type="button" class="fb-open" data-fb-open="${day}">＋ 의견 남기기</button>`}`;
   }
 
@@ -952,8 +963,21 @@
     if (open) {
       fbOpen = open.dataset.fbOpen;
       fillFeedback();
-      const ta = view.querySelector(`.fb-form[data-day="${fbOpen}"] textarea`);
-      if (ta) ta.focus();
+      // 입력창으로 바로 이동: 키보드가 뜨도록 누른 순간 포커스하고, 화면은 부드럽게 입력창으로
+      const form = view.querySelector(`.fb-form[data-day="${fbOpen}"]`);
+      const ta = form && form.querySelector('textarea');
+      if (ta) {
+        ta.focus({ preventScroll: true });
+        form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      }
+      return;
+    }
+    if (e.target.closest('[data-fb-expand]')) { fbExpanded = true; fillFeedback(); return; }
+    if (e.target.closest('[data-fb-collapse]')) {
+      fbExpanded = false;
+      fillFeedback();
+      const card = view.querySelector('.voice');
+      if (card && card.getBoundingClientRect().top < 0) card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       return;
     }
     if (e.target.closest('[data-fb-cancel]')) { fbOpen = null; fillFeedback(); }
@@ -1077,7 +1101,7 @@
   const flyer = document.createElement('div');
   flyer.className = 'flyer';
   flyer.setAttribute('aria-hidden', 'true');
-  const fly = { x: -FLY_W, dir: 1, dist: 0, puff: 0 };
+  const fly = { target: -FLY_W, pos: -FLY_W, vel: 0, dir: 1, lift: 0, tilt: 0, puff: 0, raf: 0, last: 0 };
   const planeSrc = (T.hero && T.hero.plane) || '';
   if (planeSrc) {
     flyer.innerHTML = `<button type="button" class="fly-plane" tabindex="-1" aria-label="맨 위로">
@@ -1093,31 +1117,58 @@
     flyer.classList.toggle('left', dir < 0); // 방향이 바뀌면 비행기와 태오가 함께 빙글 돌아섬
   }
 
-  function moveFlyer(dy) {
+  // 스크롤은 '목표 위치'만 옮기고, 비행기는 스프링처럼 부드럽게 따라감 (관성·감속·기울기)
+  function nudgeFlyer(dy) {
     if (!flyPlane || !dy) return;
-    const box = flyer.clientWidth || window.innerWidth;
-    const dir = dy > 0 ? 1 : -1;
-    if (dir !== fly.dir) setFlyDir(dir);
-    const span = box + FLY_W * 2;
-    fly.x += dy * 0.55;
-    fly.x = ((((fly.x + FLY_W) % span) + span) % span) - FLY_W;
-    fly.dist += Math.abs(dy);
-    const wave = Math.sin(fly.dist / 160);
-    const lift = -wave * 16;
-    const tilt = -Math.cos(fly.dist / 160) * 7 * dir;
-    flyPlane.style.transform = `translate(${fly.x}px, ${lift}px) rotate(${tilt}deg)`;
-    fly.puff += Math.abs(dy);
-    if (fly.puff > 46) { fly.puff = 0; addPuff(lift); }
+    fly.target += dy * 0.6;
+    if (!fly.raf) { fly.last = performance.now(); fly.raf = requestAnimationFrame(stepFlyer); }
   }
 
-  function addPuff(lift) {
-    if (flyer.querySelectorAll('.puff').length > 7) return;
+  function stepFlyer(now) {
+    const dt = Math.min(3, (now - fly.last) / 16.67); // 60fps 기준 프레임 수
+    fly.last = now;
+    // 스프링: 목표를 향해 가속하고, 공기 저항으로 감속
+    fly.vel += (fly.target - fly.pos) * 0.05 * dt;
+    fly.vel *= Math.pow(0.72, dt);
+    fly.vel = Math.max(-24, Math.min(24, fly.vel));
+    fly.pos += fly.vel * dt;
+    // 방향은 가려는 쪽이 분명할 때만 바꿈 (멈추면서 살짝 밀려도 뒤돌지 않게)
+    const ahead = fly.target - fly.pos;
+    if (Math.abs(ahead) > 8 && Math.sign(ahead) !== fly.dir) setFlyDir(Math.sign(ahead));
+
+    const box = flyer.clientWidth || window.innerWidth;
+    const span = box + FLY_W * 2;
+    const x = ((((fly.pos + FLY_W) % span) + span) % span) - FLY_W;
+    // 높이: 완만한 물결 + 빨리 날수록 살짝 위로
+    const speed = Math.abs(fly.vel);
+    const goal = Math.sin(fly.pos / 230) * 12 - Math.min(speed * 0.7, 12);
+    const prevLift = fly.lift;
+    fly.lift += (goal - fly.lift) * (1 - Math.pow(0.88, dt));
+    // 기울기: 올라갈 땐 기수를 들고, 내려갈 땐 숙임 + 속도만큼 살짝 들기
+    const vy = (fly.lift - prevLift) / (dt || 1);
+    const pitch = (Math.atan2(vy, Math.max(speed, 1.5)) * 180) / Math.PI;
+    const tiltGoal = Math.max(-12, Math.min(12, (pitch - Math.min(speed * 0.25, 4)) * fly.dir));
+    fly.tilt += (tiltGoal - fly.tilt) * (1 - Math.pow(0.87, dt));
+    flyPlane.style.transform = `translate3d(${x.toFixed(2)}px, ${fly.lift.toFixed(2)}px, 0) rotate(${fly.tilt.toFixed(2)}deg)`;
+
+    fly.puff += speed * dt;
+    if (fly.puff > 34 && speed > 2) { fly.puff = 0; addPuff(x, fly.lift, speed); }
+
+    const settled = Math.abs(fly.target - fly.pos) < 0.3 && speed < 0.05 && Math.abs(goal - fly.lift) < 0.1 && Math.abs(tiltGoal - fly.tilt) < 0.05;
+    fly.raf = settled ? 0 : requestAnimationFrame(stepFlyer);
+  }
+
+  function addPuff(x, lift, speed) {
+    if (flyer.querySelectorAll('.puff').length > 9) return;
     const el = document.createElement('i');
     el.className = 'puff';
-    const tailX = fly.dir > 0 ? fly.x + 10 : fly.x + FLY_W - 10;
+    const size = 9 + Math.random() * 8;
+    const tailX = fly.dir > 0 ? x + 12 : x + FLY_W - 12;
     el.style.left = `${tailX}px`;
-    el.style.bottom = `${48 - lift}px`;
-    el.style.setProperty('--dx', `${-fly.dir * 22}px`);
+    el.style.bottom = `${50 - lift + (Math.random() * 8 - 4)}px`;
+    el.style.width = el.style.height = `${size.toFixed(1)}px`;
+    el.style.setProperty('--dx', `${(-fly.dir * (18 + speed * 1.5)).toFixed(1)}px`);
+    el.style.setProperty('--dy', `${(-4 - Math.random() * 8).toFixed(1)}px`);
     flyer.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
   }
@@ -1189,7 +1240,7 @@
     const inv = view.querySelector('.invite');
     const heroGone = !inv || inv.getBoundingClientRect().bottom < 40;
     flyer.classList.toggle('show', heroGone && y > 120);
-    moveFlyer(dy);
+    nudgeFlyer(dy);
     drawSky();
   }
   let scrollQueued = false;
