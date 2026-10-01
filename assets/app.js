@@ -150,6 +150,17 @@
   }
 
   /* ---------- 홈 ---------- */
+  // 태오 말풍선: 열 때마다 하나씩 랜덤 (방금 나온 건 피함), 태오를 누르면 다음 말
+  let lastBubble = -1;
+  function pickBubble() {
+    const list = (T.hero && (T.hero.bubbles || [T.hero.bubble])) || [''];
+    if (list.length < 2) return list[0] || '';
+    let i;
+    do { i = Math.floor(Math.random() * list.length); } while (i === lastBubble);
+    lastBubble = i;
+    return list[i];
+  }
+
   function heroHTML(st) {
     const H = T.hero || {};
     let big;
@@ -161,16 +172,16 @@
     } else { big = '다녀왔어요'; small = '모두 수고했어요'; }
     const nights = dates.length - 1;
     return `<section class="invite" aria-label="여행 초대">
+      <p class="dday inv-dday"><span>${esc(small)}</span><b>${esc(big)}</b></p>
       <div class="inv-text">
         <p class="inv-eyebrow">${esc(H.eyebrow || T.eyebrow)}</p>
         <h1 class="inv-title">${esc(H.title || T.shortTitle)}</h1>
         <p class="inv-dates">${md(T.start)}(${wd(T.start)}) – ${md(T.end)}(${wd(T.end)})</p>
-        <p class="dday"><b>${esc(big)}</b><span>${esc(small)}</span></p>
         <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
         ${T.share ? `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>` : ''}
       </div>
       ${H.photo ? `<figure class="inv-photo">
-        <p class="inv-bubble">${esc(H.bubble || '')}</p>
+        <p class="inv-bubble" data-bubble aria-live="polite">${esc(pickBubble())}</p>
         <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="600" height="736" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
@@ -367,13 +378,13 @@
     return `<ol class="steps">${rows}</ol>`;
   }
 
-  function routeMapHTML(key, title) {
+  function routeMapHTML(key, title, foldable) {
     const sel = mapSel[key];
     const chips = [`<button type="button" class="mchip" data-map-key="${key}" data-map-day="all" aria-pressed="${sel === 'all'}">전체</button>`]
-      .concat(T.days.map((d, i) => `<button type="button" class="mchip" data-map-key="${key}" data-map-day="${i}" aria-pressed="${String(sel) === String(i)}" style="--dc:var(--d${i + 1})"><i></i>${dom(d.date)}일</button>`))
+      .concat(T.days.map((d, i) => `<button type="button" class="mchip" data-map-key="${key}" data-map-day="${i}" aria-pressed="${String(sel) === String(i)}" style="--dc:var(--d${i + 1})"><i></i>${dom(d.date)}<span class="mchip-u">일</span></button>`))
       .join('');
     return `<section class="block" id="map-${key}">
-      <h2 class="h">${esc(title)}</h2>
+      ${foldable ? `<div class="h-row"><h2 class="h">${esc(title)}</h2><button type="button" class="h-fold" data-map-close>접기<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button></div>` : `<h2 class="h">${esc(title)}</h2>`}
       <p class="lede">${esc(T.map.caption)}</p>
       <div class="card route-map" data-map="${key}">
         <div class="mchips" role="group" aria-label="날짜 고르기">${chips}</div>
@@ -550,17 +561,36 @@
   }
 
   function updatesHTML() {
-    const list = (T.updates || []).slice(0, 4);
+    const list = T.updates || [];
     if (!list.length) return '';
+    const li = (u) => `<li><span class="u-d">${esc(md(u.date))}</span><span class="u-t">${esc(u.text)}${u.by ? `<small>${esc(u.by)}</small>` : ''}</span></li>`;
+    const rest = list.slice(2, 12);
     return `<section class="block">
       <h2 class="h">업데이트 소식</h2>
-      <ol class="card updates">${list.map((u) => `<li><span class="u-d">${esc(md(u.date))}</span><span class="u-t">${esc(u.text)}${u.by ? `<small>${esc(u.by)}</small>` : ''}</span></li>`).join('')}</ol>
+      <div class="card updates-card">
+        <ol class="updates">${list.slice(0, 2).map(li).join('')}</ol>
+        ${rest.length ? `<details class="more"><summary><span>지난 소식 ${rest.length}개 더 보기</span><span>접기</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><ol class="updates">${rest.map(li).join('')}</ol></details>` : ''}
+      </div>
+    </section>`;
+  }
+
+  // 홈 동선 지도: 처음엔 접어두고, 펼칠 때 지도를 그림
+  let homeMapOpen = false;
+  function homeMapHTML() {
+    if (homeMapOpen) return routeMapHTML('home', '동선 지도', true);
+    return `<section class="block" id="map-home">
+      <h2 class="h">동선 지도</h2>
+      <button type="button" class="card map-teaser" data-map-open>
+        <span class="mt-ic">${ICON.route}</span>
+        <span class="mt-t"><b>날짜별 동선 지도 펼치기</b><small>${T.days.length}일 동선을 실제 도로 위에 시간 순서대로</small></span>
+        <svg class="mt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </section>`;
   }
 
   function renderHome() {
     const st = tripState();
-    return heroHTML(st) + nowHTML(st) + plannerHTML(st) + homeVoiceHTML() + routeMapHTML('home', '동선 지도') + updatesHTML() + bookingsHTML() + todoHTML();
+    return heroHTML(st) + nowHTML(st) + plannerHTML(st) + homeVoiceHTML() + homeMapHTML() + updatesHTML() + bookingsHTML() + todoHTML();
   }
 
   /* ---------- 일정 ---------- */
@@ -672,6 +702,21 @@
   let pendingGoto = null;
   view.addEventListener('click', (e) => {
     if (e.target.closest('[data-share]')) { shareInvite(); return; }
+    if (e.target.closest('[data-map-open], [data-map-close]')) {
+      homeMapOpen = !!e.target.closest('[data-map-open]');
+      if (maps.home && maps.home.kind === 'leaflet') maps.home.map.remove();
+      delete maps.home;
+      view.querySelector('#map-home').outerHTML = homeMapHTML();
+      if (homeMapOpen) initMaps();
+      const nsec = view.querySelector('#map-home');
+      if (nsec && nsec.getBoundingClientRect().top < 0) nsec.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      return;
+    }
+    if (e.target.closest('.inv-photo')) {
+      const b = view.querySelector('[data-bubble]');
+      if (b) { b.textContent = pickBubble(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+      return;
+    }
     const chip = e.target.closest('[data-map-day]');
     if (chip) { selectMapDay(chip.dataset.mapKey, chip.dataset.mapDay, false); return; }
     const show = e.target.closest('[data-show-day]');
@@ -908,12 +953,13 @@
       ? `<label class="fb-label" for="${uid}-day">언제요?</label>
          <select id="${uid}-day" name="day" class="fb-input"><option value="">날짜 상관없음</option>${T.days.map((d) => `<option value="${d.date}">${esc(mdw(d.date))}</option>`).join('')}</select>`
       : '';
+    // 입력창을 맨 위에 둬서 열자마자 바로 쓸 수 있게
     return `<form class="fb-form" data-day="${day}">
+      <label class="fb-label" for="${uid}-text">${day === 'home' ? '무슨 이야기예요?' : '뭐 하고 싶어요?'}</label>
+      <textarea id="${uid}-text" name="text" class="fb-input" maxlength="500" rows="3" required placeholder="${day === 'home' ? '예) 14일에 비 오면 실내로 바꿔요 / 15일 점심은 고기국수!' : '예) 카멜리아힐 가서 가족사진 찍고 싶어요'}"></textarea>
       <p class="fb-label">누구예요?</p>
       <div class="fb-names">${T.people.filter((p) => p.id !== 'taeo').map((p) => `<label><input type="radio" name="name" value="${esc(p.name)}"${me === p.name ? ' checked' : ''}><span>${esc(p.name)}</span></label>`).join('')}</div>
       ${daySelect}
-      <label class="fb-label" for="${uid}-text">${day === 'home' ? '무슨 이야기예요?' : '뭐 하고 싶어요?'}</label>
-      <textarea id="${uid}-text" name="text" class="fb-input" maxlength="500" rows="3" required placeholder="${day === 'home' ? '예) 14일에 비 오면 실내로 바꿔요 / 15일 점심은 고기국수!' : '예) 카멜리아힐 가서 가족사진 찍고 싶어요'}"></textarea>
       <label class="fb-label" for="${uid}-link">참고 링크 <small>(선택)</small></label>
       <input id="${uid}-link" name="link" type="url" class="fb-input" placeholder="인스타 · 블로그 · 네이버 지도 주소">
       <input name="website" class="fb-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -968,7 +1014,7 @@
       const ta = form && form.querySelector('textarea');
       if (ta) {
         ta.focus({ preventScroll: true });
-        form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+        form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       }
       return;
     }
