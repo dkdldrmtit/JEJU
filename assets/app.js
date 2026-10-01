@@ -8,7 +8,7 @@
   const foot = document.getElementById('foot');
   const tabLinks = document.querySelectorAll('.tabbar a');
 
-  const TABS = ['home', 'plan', 'ideas', 'pack', 'info'];
+  const TABS = ['home', 'plan', 'ideas', 'pack', 'info', 'album', 'guide']; // album · guide 는 탭바 없이 링크로만
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const STATUS = { ok: '확정', plan: '예정', tbd: '미정', idea: '후보' };
   const PACK_KEY = 'jeju2026.packing.v1';
@@ -19,7 +19,11 @@
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   )).replace(/ · /g, '\u00A0· ');
   const toDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
-  const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+  // 테스트용: 주소 끝에 ?now=2026-10-13T11:40 을 붙이면 그 시각인 것처럼 보여줌
+  const NOW_AT = (() => { const m = /[?&]now=([\dT:-]+)/.exec(location.search); const d = m ? new Date(m[1]) : null; return d && !Number.isNaN(d.getTime()) ? d : null; })();
+  const LOADED = Date.now();
+  const nowDate = () => (NOW_AT ? new Date(NOW_AT.getTime() + (Date.now() - LOADED)) : new Date());
+  const today = () => { const n = nowDate(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
   const dayDiff = (from, to) => Math.round((to - from) / 86400000);
   const md = (iso) => { const d = toDate(iso); return `${d.getMonth() + 1}.${d.getDate()}`; };
   const wd = (iso) => WD[toDate(iso).getDay()];
@@ -141,7 +145,11 @@
         <p class="day-wx" data-wx-chip="${day.date}">${wxChipHTML(day.date)}</p>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
         ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : ''}
-        ${day.open ? `<p class="empty-slot">${esc(day.open)}</p><div class="fb" data-fb-day="${day.date}"></div>` : ''}
+        ${day.open ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
+        ${pollDayHTML(day)}
+        ${day.open ? `<div class="fb" data-fb-day="${day.date}"></div>` : ''}
+        ${rainBoxHTML(day)}
+        ${babyDayHTML(day)}
         ${night
           ? `<p class="night">${ICON.moon}<span>숙박 · <b>${esc(night.name)}</b></span></p>`
           : `<p class="night">${ICON.plane}<span>${esc(day.nightNote || '집으로')}</span></p>`}
@@ -187,20 +195,6 @@
     </section>`;
   }
 
-  /* 여행 중에만: 오늘 카드 */
-  function nowHTML(st) {
-    if (st.phase !== 'during') return '';
-    const day = T.days[st.index];
-    const items = day.items || [];
-    return `<section class="block">
-      <div class="card now-card">
-        <p class="now-label">오늘 · ${esc(mdw(day.date))}</p>
-        <h3>${esc(day.title)}</h3>
-        ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : `<p class="empty-slot">${esc(day.open || '아직 정하는 중이에요')}</p>`}
-      </div>
-    </section>`;
-  }
-
   /* ---------- 날씨 (Open-Meteo 예보, 못 받으면 평년값) ---------- */
   const WX_KEY = 'jeju2026.wx.v1';
   let wxDays = null;
@@ -240,6 +234,7 @@
     view.querySelectorAll('[data-wx-chip]').forEach((el) => { el.innerHTML = wxChipHTML(el.dataset.wxChip); });
     const list = view.querySelector('[data-wx-list]');
     if (list) list.innerHTML = wxListHTML();
+    view.querySelectorAll('[data-rain]').forEach((el) => { const d = T.days.find((x) => x.date === el.dataset.rain); if (d) el.outerHTML = rainBoxHTML(d); });
   }
   function wxListHTML() {
     return T.days.map((d) => { const w = wxOf(d.date); return `<li><span class="wl-d">${esc(mdw(d.date))}</span><span class="wl-i">${WX_ICON[w.type]}</span><span class="wl-l">${w.normal ? '평년' : WX_LABEL[w.type]}</span><span class="wl-t">${w.max}° / ${w.min}°</span><span class="wl-p">${w.pop != null ? `비 ${w.pop}%` : ''}</span></li>`; }).join('');
@@ -590,7 +585,7 @@
 
   function renderHome() {
     const st = tripState();
-    return heroHTML(st) + nowHTML(st) + plannerHTML(st) + homeVoiceHTML() + homeMapHTML() + updatesHTML() + bookingsHTML() + todoHTML();
+    return heroHTML(st) + nowHTML(st) + checkHTML(st) + quickHTML(st) + plannerHTML(st) + homeVoiceHTML() + (st.phase === 'before' ? '' : homeAlbumHTML()) + homeMapHTML() + updatesHTML() + bookingsHTML() + todoHTML();
   }
 
   /* ---------- 일정 ---------- */
@@ -631,6 +626,7 @@
         <h1 class="page-title">가볼 곳 · 먹을 곳</h1>
         <p class="lede">${esc(T.ideasNote)}</p>
       </section>
+      ${pollsSectionHTML()}
       <section class="block">
         <h2 class="h">가족 의견</h2>
         <p class="lede">하고 싶은 거, 먹고 싶은 거 아무거나 남겨주세요. 링크도 붙일 수 있어요.</p>
@@ -639,7 +635,12 @@
       ${(T.ideaGroups || []).map((g) => `<section class="block">
         <h2 class="h">${esc(g.title)}</h2>
         <ul class="ideas">${g.items.map(ideaCard).join('')}</ul>
-      </section>`).join('')}`;
+      </section>`).join('')}
+      ${T.rainPlan ? `<section class="block" id="rain">
+        <h2 class="h">비 오는 날 (실내)</h2>
+        <p class="lede">${esc(T.rainPlan.note)}</p>
+        <ul class="ideas">${T.rainPlan.items.map((x) => ideaCard({ ...x, tags: rainTags(x) })).join('')}</ul>
+      </section>` : ''}`;
   }
 
   /* ---------- 준비물 (체크 표시는 이 기기에만 저장) ---------- */
@@ -701,7 +702,8 @@
   });
   let pendingGoto = null;
   view.addEventListener('click', (e) => {
-    if (e.target.closest('[data-share]')) { shareInvite(); return; }
+    const sh = e.target.closest('[data-share]');
+    if (sh) { shareInvite(sh.dataset.share); return; }
     if (e.target.closest('[data-map-open], [data-map-close]')) {
       homeMapOpen = !!e.target.closest('[data-map-open]');
       if (maps.home && maps.home.kind === 'leaflet') maps.home.map.remove();
@@ -823,11 +825,13 @@
         <h1 class="page-title">정보</h1>
         <p class="lede">항공편 · 숙소 · 렌터카 · 날씨 · 병원을 한곳에 모았어요.</p>
       </section>
-      <section class="block"><h2 class="h">누가 언제 오고 가요</h2><ul class="stack">${groupsHTML}</ul></section>
+      <section class="block"><h2 class="h">누가 언제 오고 가요</h2><ul class="stack">${groupsHTML}</ul>
+        ${T.guideB ? `<a class="btn-link" href="#guide">${esc(T.guideB.linkText || '후발대 안내 보기')}</a>` : ''}</section>
       <section class="block"><h2 class="h">숙소</h2><ul class="stack">${staysHTML}</ul></section>
       <section class="block"><h2 class="h">렌터카</h2>${carHTML}</section>
       <section class="block"><h2 class="h">날씨</h2>${weatherHTML}</section>
       <section class="block"><h2 class="h">비상 연락</h2>${emergencyHTML}</section>
+      ${babyInfoHTML()}
       <section class="block"><h2 class="h">이 사이트는요</h2>
         <div class="card info-card"><ul class="bullets">${T.about.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></div>
         ${Object.keys(T.photos || {}).length ? `<p class="src">사진 출처 · ${Object.values(T.photos).map((ph) => esc(`${ph.alt} — ${ph.credit}`)).join(' / ')}</p>` : ''}
@@ -857,9 +861,10 @@
   // 버튼을 누른 순간 바로 보내야 팝업이 막히지 않아서, 홈을 열 때 미리 불러둠
   const kakaoShareReady = () => Boolean(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share);
 
-  async function shareInvite() {
-    const S = T.share;
-    const url = (T.site && T.site.url) || location.href.split('#')[0];
+  async function shareInvite(kind) {
+    const base = T.share;
+    const S = kind === 'guide' && T.guideB ? { ...base, ...T.guideB.share } : base;
+    const url = ((T.site && T.site.url) || location.href.split('#')[0]) + (kind === 'guide' ? '#guide' : '');
     const link = { mobileWebUrl: url, webUrl: url };
     if (kakaoShareReady()) {
       try {
@@ -998,10 +1003,16 @@
       const res = await fetch(`${FB.endpoint}?t=${Date.now()}`);
       const data = await res.json();
       fbItems = (data.items || []).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+      backendV = data.v || 1;
+      if (data.votes) votes = data.votes;
+      photosOn = Boolean(data.photosOn);
     } catch (e) {
       fbItems = fbItems || [];
     }
     fillFeedback();
+    fillPolls();
+    if (photosOn && photoKey()) loadPhotos();
+    else fillAlbum();
   }
 
   view.addEventListener('click', (e) => {
@@ -1093,7 +1104,7 @@
   topbar.className = 'topbar';
   topbar.setAttribute('aria-hidden', 'true');
   document.body.appendChild(topbar);
-  const TAB_TITLE = { home: T.shortTitle, plan: '일정', ideas: '가볼 곳 · 먹을 곳', pack: '준비물', info: '정보' };
+  const TAB_TITLE = { home: T.shortTitle, plan: '일정', ideas: '가볼 곳 · 먹을 곳', pack: '준비물', info: '정보', album: '가족 사진첩', guide: '후발대 안내' };
   function updateTopbar() {
     const st = tripState();
     const right = st.phase === 'before' ? `D-${st.dday}` : st.phase === 'during' ? `${st.index + 1}일차` : '';
@@ -1299,8 +1310,382 @@
   document.addEventListener('focusin', (e) => { if (e.target.matches('input, textarea, select')) flyer.classList.add('typing'); });
   document.addEventListener('focusout', () => flyer.classList.remove('typing'));
 
+  /* =====================================================================
+     여행 도우미 — 지금 · 출발 전 체크 · 바로가기 · 후발대 안내 · 비 오는 날 · 태오 정보 · 저녁 투표 · 사진첩
+     ===================================================================== */
+  const mins = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + (m || 0); };
+  const hm = (n) => `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  const leftText = (m) => (m < 60 ? `${m}분 뒤` : `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''} 뒤`);
+  const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // 네이버 지도 길찾기: 휴대폰에 네이버 지도 앱이 있으면 바로 자동차 길안내, 없으면 네이버 지도 웹
+  function routeLink(key, label) {
+    const p = T.map.places[key];
+    if (!p) return '';
+    const name = p.q || p.name;
+    const web = `https://map.naver.com/p/search/${encodeURIComponent(name)}`;
+    const app = `nmap://route/car?dlat=${p.lat}&dlng=${p.lon}&dname=${encodeURIComponent(name)}&appname=${encodeURIComponent('dkdldrmtit.github.io')}`;
+    return `<a class="go-btn" href="${esc(web)}" data-nmap="${esc(app)}" target="_blank" rel="noopener">${ICON.route}<span>${esc(label || `${p.name} 길찾기`)}</span></a>`;
+  }
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-nmap]');
+    if (!a || !(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) return;
+    e.preventDefault();
+    const web = a.href;
+    location.href = a.dataset.nmap;
+    setTimeout(() => { if (!document.hidden) location.href = web; }, 1400);
+  });
+
+  /* 1. 여행 중: 지금 · 다음 일정 · 길찾기 */
+  function nowHTML(st) {
+    if (st.phase !== 'during') return '';
+    const day = T.days[st.index];
+    const n = nowDate();
+    const cur = n.getHours() * 60 + n.getMinutes();
+    const timed = (day.items || []).filter((it) => it.time).sort((a, b) => mins(a.time) - mins(b.time));
+    let now = null;
+    let next = null;
+    timed.forEach((it) => { if (mins(it.time) <= cur) now = it; else if (!next) next = it; });
+    let tomorrow = false;
+    if (!next && T.days[st.index + 1]) { next = (T.days[st.index + 1].items || []).find((it) => it.time) || null; tomorrow = Boolean(next); }
+    const stop = (day.route || []).find((r) => r.time && mins(r.time) > cur);
+    const stopPlace = stop && T.map.places[stop.at];
+    return `<section class="block now-block">
+      <div class="card now-card">
+        <div class="now-top"><span class="now-live"><i></i>지금</span><span class="now-clock">${esc(mdw(day.date))} ${hm(n)} · DAY ${st.index + 1}</span></div>
+        <p class="now-what">${esc(now ? now.title : (next && !tomorrow ? '곧 시작해요' : '자유 시간'))}</p>
+        ${now && now.note ? `<p class="now-note">${esc(now.note)}</p>` : ''}
+        ${next ? `<div class="now-next"><span class="nn-l">다음</span><span class="nn-t"><b>${tomorrow ? '내일 ' : ''}${esc(next.time)}</b> ${esc(next.title)}</span>${tomorrow ? '' : `<em>${leftText(mins(next.time) - cur)}</em>`}</div>` : '<div class="now-next"><span class="nn-l">다음</span><span class="nn-t">오늘 일정 끝 · 푹 쉬어요</span></div>'}
+        <div class="now-actions">
+          ${stopPlace ? routeLink(stop.at, `${stopPlace.name}까지 길찾기`) : ''}
+          <a class="now-all" href="#plan" data-goto="day-${day.date}">오늘 일정 전체</a>
+        </div>
+      </div>
+    </section>`;
+  }
+  setInterval(() => {
+    if (currentTab() !== 'home') return;
+    const el = view.querySelector('.now-block');
+    if (el) el.outerHTML = nowHTML(tripState());
+  }, 60000);
+
+  /* 6. 출발 전 · 여행 중 챙길 것 (체크는 이 휴대폰에만 저장) */
+  const REMIND_KEY = 'jeju2026.remind.v1';
+  let remindState = (() => { try { return JSON.parse(localStorage.getItem(REMIND_KEY)) || {}; } catch (e) { return {}; } })();
+  function checkHTML(st) {
+    const t = today();
+    const list = (T.reminders || []).filter((r) => toDate(r.from) <= t && t <= toDate(r.to));
+    if (!list.length) return '';
+    const done = list.filter((r) => remindState[r.id]).length;
+    const title = st.phase === 'before' ? `출발 D-${st.dday} · 이것만 챙겨요` : '오늘 챙길 것';
+    return `<section class="block" id="checks">
+      <div class="card checks${done === list.length ? ' all-done' : ''}">
+        <div class="ck-head"><b>${esc(title)}</b><span class="count${done === list.length ? ' full' : ''}">${done} / ${list.length}</span></div>
+        <ul class="checklist">${list.map((r) => `<li><label for="rm-${esc(r.id)}">
+          <input type="checkbox" id="rm-${esc(r.id)}" data-remind="${esc(r.id)}"${remindState[r.id] ? ' checked' : ''}>
+          <span class="txt">${esc(r.text)}${r.who || r.note ? `<small>${esc([r.who ? whoText(r.who) : '', r.note || ''].filter(Boolean).join(' · '))}</small>` : ''}</span>
+        </label></li>`).join('')}</ul>
+      </div>
+    </section>`;
+  }
+  view.addEventListener('change', (e) => {
+    const box = e.target.closest('input[data-remind]');
+    if (!box) return;
+    if (box.checked) remindState[box.dataset.remind] = true;
+    else delete remindState[box.dataset.remind];
+    try { localStorage.setItem(REMIND_KEY, JSON.stringify(remindState)); } catch (err) { /* 무시 */ }
+    const sec = view.querySelector('#checks');
+    if (sec) sec.outerHTML = checkHTML(tripState());
+  });
+
+  /* 홈 바로가기: 후발대 안내 · 저녁 투표 · 사진첩 */
+  function quickHTML(st) {
+    const t = today();
+    const tiles = [];
+    const G = T.guideB;
+    if (G && t <= toDate(G.until || T.end)) tiles.push(`<a class="qt" href="#guide"><span class="qt-ic">${ICON.plane}</span><b>후발대 안내</b><small>${esc(G.tile || '도착 · 출발 한눈에')}</small></a>`);
+    const openPolls = (T.polls || []).filter((p) => t <= toDate(p.closes));
+    if (openPolls.length) tiles.push(`<a class="qt" href="#ideas" data-goto="polls"><span class="qt-ic">${ICON.meal}</span><b>저녁 투표</b><small>${esc(openPolls.map((p) => p.short || p.title).join(' · '))}</small></a>`);
+    tiles.push(`<a class="qt" href="#album"><span class="qt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 8"/></svg></span><b>가족 사진첩</b><small>${st.phase === 'before' ? '여행 가서 같이 모아요' : '찍은 사진 올리기'}</small></a>`);
+    return `<section class="block"><div class="quick q${tiles.length}">${tiles.join('')}</div></section>`;
+  }
+
+  /* 7. 후발대 안내 (할아버지 · 할머니 · 선미 · 범준) */
+  function renderGuide() {
+    const G = T.guideB;
+    if (!G) return '<section class="block"><h1 class="page-title">후발대 안내</h1></section>';
+    const g = T.groups.find((x) => x.id === 'b');
+    const stepList = (steps) => `<ol class="g-steps">${steps.map((s) => `<li><span class="gs-t">${esc(s.time || '')}</span><div><b>${esc(s.title)}</b>${s.note ? `<p>${esc(s.note)}</p>` : ''}</div></li>`).join('')}</ol>`;
+    return `<section class="block">
+        <p class="page-kicker">${esc(whoText('b'))}</p>
+        <h1 class="page-title">${esc(G.title)}</h1>
+        <p class="lede">${esc(G.intro)}</p>
+        <button type="button" class="kakao-share small" data-share="guide">${ICON.talk}<span>이 안내 카톡으로 보내기</span></button>
+      </section>
+      <section class="block">
+        <h2 class="h">${esc(mdw(g.arrive.date))} 제주 도착</h2>
+        <div class="card g-card">
+          <p class="g-flight">${ICON.plane}<span><b>${esc(g.arrive.time)} 도착</b> · ${esc(g.arrive.flight)}</span></p>
+          ${stepList(G.arrive)}
+          ${G.meet ? `<p class="tip">${esc(G.meet)}</p>` : ''}
+          ${routeLink('cju', '제주공항 지도')}
+        </div>
+      </section>
+      <section class="block">
+        <h2 class="h">${esc(mdw(g.depart.date))} 제주 출발</h2>
+        <div class="card g-card">
+          <p class="g-flight">${ICON.plane}<span><b>${esc(g.depart.time)} 출발</b> · ${esc(g.depart.flight)}</span></p>
+          ${stepList(G.depart)}
+        </div>
+      </section>
+      ${G.bring ? `<section class="block"><h2 class="h">꼭 챙겨요</h2><div class="card info-card"><ul class="bullets">${G.bring.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div></section>` : ''}
+      <section class="block"><a class="btn-link" href="#plan">전체 일정 보기</a></section>`;
+  }
+
+  /* 3. 비 오는 날 실내 대안 (예보에 비가 있으면 자동으로 펼쳐짐) */
+  function isRainy(iso) {
+    const w = wxOf(iso);
+    return !w.normal && (w.type === 'rain' || w.type === 'storm' || (w.pop != null && w.pop >= 50));
+  }
+  const rainTags = (x) => [{ text: x.drive }, ...(x.baby ? [{ text: x.baby, kind: 'baby' }] : []), ...(x.closed ? [{ text: x.closed }] : [])].filter((t) => t.text);
+  function rainBoxHTML(day) {
+    const R = T.rainPlan;
+    if (!R || !(day.blocks || []).some((b) => b[4] === 'tbd')) return '';
+    const w = wxOf(day.date);
+    const rainy = isRainy(day.date);
+    const head = rainy ? `비 소식${w.pop != null ? ` ${w.pop}%` : ''} · 실내로 가요` : '비 오면 갈 실내 후보';
+    return `<details class="xbox rain${rainy ? ' on' : ''}" data-rain="${day.date}"${rainy ? ' open' : ''}>
+      <summary>${WX_ICON.rain}<span>${esc(head)}</span><em>${R.items.length}곳</em></summary>
+      <ul class="xlist">${R.items.map((x) => `<li><div><b>${esc(x.name)}</b><p>${esc([x.drive, x.desc].filter(Boolean).join(' · '))}</p></div>${naverLink(x.q || x.name, true)}</li>`).join('')}</ul>
+    </details>`;
+  }
+
+  /* 2. 태오 정보: 그날 가는 곳의 수유실 · 아기용품 + 아플 때 */
+  const BABY_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4.5"/><path d="M10.3 8.3h.01M13.7 8.3h.01M10.5 10.3c.9.6 2.1.6 3 0"/><path d="M5.5 21c.8-4 3.4-6.5 6.5-6.5s5.7 2.5 6.5 6.5"/></svg>';
+  function babyDayHTML(day) {
+    const B = T.baby;
+    if (!B) return '';
+    const keys = [...new Set([...(day.route || []).map((r) => r.at), day.night].filter(Boolean))];
+    const spots = keys.map((k) => B.spots && B.spots[k] && { k, ...B.spots[k] }).filter(Boolean);
+    if (!spots.length) return '';
+    return `<details class="xbox baby">
+      <summary>${BABY_IC}<span>태오 정보 · 수유실 · 아기용품</span><em>${spots.length}곳</em></summary>
+      <ul class="xlist">${spots.map((s) => `<li><div><b>${esc(s.name)}</b>${s.items.map((x) => `<p>${esc(x)}</p>`).join('')}</div></li>`).join('')}</ul>
+      <a class="xmore" href="#info" data-goto="baby">아플 때 갈 곳 보기</a>
+    </details>`;
+  }
+  function babyInfoHTML() {
+    const B = T.baby;
+    if (!B) return '';
+    return `<section class="block" id="baby"><h2 class="h">태오 · 아기 정보</h2>
+      ${B.lead ? `<p class="lede">${esc(B.lead)}</p>` : ''}
+      <ul class="stack">
+        ${Object.values(B.spots || {}).map((s) => `<li class="card info-card"><h3>${esc(s.name)}</h3><ul class="bullets">${s.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></li>`).join('')}
+        ${B.clinics && B.clinics.length ? `<li class="card info-card emergency"><h3>태오가 아플 때</h3>
+          ${B.clinicLead ? `<p class="sub">${esc(B.clinicLead)}</p>` : ''}
+          <ul class="hosp">${B.clinics.map((h) => `<li><b>${esc(h.name)}</b><p>${esc(h.desc)}</p>${h.address ? `<p>${esc(h.address)}</p>` : ''}${naverLink(h.q || h.name)}</li>`).join('')}</ul>
+          ${B.clinicTip ? `<p class="tip">${esc(B.clinicTip)}</p>` : ''}</li>` : ''}
+      </ul>
+      ${B.src ? `<p class="src">출처 · ${esc(B.src)}</p>` : ''}
+    </section>`;
+  }
+
+  /* 5. 저녁 투표 (구글 시트에 저장, 하트를 다시 누르면 취소) */
+  let votes = null;
+  let backendV = 0;
+  let photosOn = false;
+  const votersOf = (pollId, optId) => ((votes && votes[pollId] && votes[pollId][optId]) || []);
+  function leaderOf(p) {
+    let best = null;
+    let max = 0;
+    let tie = false;
+    p.options.forEach((o) => {
+      const n = votersOf(p.id, o.id).length;
+      if (n > max) { max = n; best = o; tie = false; } else if (n && n === max) tie = true;
+    });
+    return max ? { opt: best, n: max, tie } : null;
+  }
+  function pollsSectionHTML() {
+    if (!(T.polls || []).length) return '';
+    return `<section class="block" id="polls">
+      <h2 class="h">저녁 투표</h2>
+      <p class="lede">가고 싶은 곳에 하트를 눌러주세요. 여러 곳 눌러도 돼요. 마감 때 1등이 일정에 들어가요.</p>
+      <div data-polls></div>
+    </section>`;
+  }
+  function pollsBodyHTML() {
+    const me = savedName();
+    const ready = backendV >= 2;
+    const names = `<div class="poll-who"><span>누구예요?</span><div class="fb-names">${T.people.filter((p) => p.id !== 'taeo').map((p) => `<label><input type="radio" name="pollname" value="${esc(p.name)}"${me === p.name ? ' checked' : ''}><span>${esc(p.name)}</span></label>`).join('')}</div></div>`;
+    const t = today();
+    return `${ready ? names : '<p class="poll-off">투표는 곧 열려요 (민석이 설정하는 중)</p>'}
+      ${T.polls.map((p) => {
+        const closed = t > toDate(p.closes);
+        const lead = leaderOf(p);
+        return `<div class="card poll${closed ? ' closed' : ''}">
+          <div class="poll-head"><b>${esc(p.title)}</b><span>${closed ? '마감' : `${esc(mdw(p.closes))}까지`}</span></div>
+          <ul class="poll-opts">${p.options.map((o) => {
+            const vs = votersOf(p.id, o.id);
+            const mine = me && vs.includes(me);
+            const top = lead && !lead.tie && lead.opt.id === o.id;
+            return `<li class="${top ? 'top' : ''}">
+              <div class="po-t"><b>${esc(o.name)}${top ? ' <span class="po-1">1등</span>' : ''}</b><p>${esc([o.drive, o.desc].filter(Boolean).join(' · '))}</p>
+                ${vs.length ? `<p class="po-who">${esc(vs.join(' · '))}</p>` : ''}${naverLink(o.q || o.name, true)}</div>
+              <button type="button" class="heart${mine ? ' on' : ''}" data-vote="${esc(p.id)}|${esc(o.id)}" aria-pressed="${mine ? 'true' : 'false'}" aria-label="${esc(o.name)} 하트"${!ready || closed ? ' disabled' : ''}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.8 3.9 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.7 1.1-1.6 2.7-2.7 4.7-2.7 3.4 0 5.6 3.3 4.5 6.6-1.7 4.8-9.2 9.4-9.2 9.4z"/></svg><span>${vs.length}</span>
+              </button>
+            </li>`;
+          }).join('')}</ul>
+        </div>`;
+      }).join('')}`;
+  }
+  function pollDayHTML(day) {
+    const p = (T.polls || []).find((x) => x.day === day.date);
+    if (!p) return '';
+    return `<a class="poll-day" href="#ideas" data-goto="polls" data-poll-day="${esc(p.id)}">${ICON.meal}<span>${esc(p.short || p.title)} 투표 중</span><em></em></a>`;
+  }
+  function fillPolls() {
+    view.querySelectorAll('[data-polls]').forEach((el) => { el.innerHTML = pollsBodyHTML(); });
+    view.querySelectorAll('[data-poll-day]').forEach((el) => {
+      const p = T.polls.find((x) => x.id === el.dataset.pollDay);
+      const lead = p && leaderOf(p);
+      el.querySelector('em').textContent = lead ? (lead.tie ? `공동 1등 ${lead.n}표` : `1등 ${lead.opt.name} ${lead.n}표`) : '';
+    });
+  }
+  view.addEventListener('change', (e) => {
+    const r = e.target.closest('input[name="pollname"]');
+    if (r) { saveName(r.value); fillPolls(); }
+  });
+  view.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-vote]');
+    if (!btn) return;
+    const name = savedName();
+    if (!name) { toast('먼저 이름을 골라주세요'); const w = view.querySelector('.poll-who'); if (w) { w.classList.remove('nudge'); void w.offsetWidth; w.classList.add('nudge'); } return; }
+    const [poll, option] = btn.dataset.vote.split('|');
+    votes = votes || {};
+    const pv = (votes[poll] = votes[poll] || {});
+    const list = (pv[option] = pv[option] || []);
+    const i = list.indexOf(name);
+    if (i >= 0) list.splice(i, 1); else list.push(name);
+    fillPolls();
+    try {
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'vote', poll, option, name }) });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      votes = data.votes || votes;
+      fillPolls();
+    } catch (err) {
+      toast('투표를 저장하지 못했어요. 다시 눌러주세요');
+      loadFeedback();
+    }
+  });
+
+  /* 4. 가족 사진첩 (구글 드라이브에 저장 · 가족 비밀번호가 있어야 보고 올림) */
+  const PKEY = 'jeju2026.photokey';
+  let photos = null;
+  let photoErr = '';
+  const photoKey = () => { try { return localStorage.getItem(PKEY) || ''; } catch (e) { return ''; } };
+  const thumb = (id, w) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+  async function loadPhotos() {
+    const key = photoKey();
+    if (!FB.endpoint || !key) { fillAlbum(); return; }
+    try {
+      const res = await fetch(`${FB.endpoint}?type=photos&key=${encodeURIComponent(key)}&t=${Date.now()}`);
+      const data = await res.json();
+      if (data.ok) { photos = data.photos || []; photoErr = ''; } else {
+        photoErr = data.error || 'fail';
+        if (photoErr === 'key') { try { localStorage.removeItem(PKEY); } catch (e) { /* 무시 */ } }
+      }
+    } catch (e) { photoErr = 'net'; }
+    fillAlbum();
+  }
+  function albumBodyHTML(limit) {
+    if (!FB.endpoint || (backendV && (backendV < 2 || !photosOn))) return '<p class="album-empty">사진첩은 곧 열려요 (민석이 설정하는 중)</p>';
+    if (!backendV) return '<p class="fb-empty loading">불러오는 중…</p>';
+    if (!photoKey()) {
+      return `<form class="album-lock" data-album-lock>
+        <p>가족 비밀번호를 넣으면 사진을 보고 올릴 수 있어요. 비밀번호는 단톡방에 있어요.</p>
+        <div class="al-row"><input name="pk" class="fb-input" type="password" inputmode="numeric" autocomplete="off" placeholder="가족 비밀번호" aria-label="가족 비밀번호"><button type="submit" class="btn primary">열기</button></div>
+        ${photoErr === 'key' ? '<p class="fb-status">비밀번호가 달라요. 다시 확인해 주세요.</p>' : ''}
+      </form>`;
+    }
+    if (photos === null) return photoErr === 'net' ? '<p class="album-empty">사진을 불러오지 못했어요. 잠시 뒤 다시 열어주세요.</p>' : '<p class="fb-empty loading">불러오는 중…</p>';
+    const list = limit ? photos.slice(0, limit) : photos;
+    const up = `<label class="btn primary album-up"><input type="file" accept="image/*" multiple data-upload hidden>＋ 사진 올리기</label>`;
+    if (!photos.length) return `<p class="album-empty">아직 사진이 없어요. 첫 사진을 올려주세요!</p>${up}`;
+    const grid = (arr) => `<div class="ph-grid">${arr.map((ph) => `<button type="button" class="ph" data-ph="${esc(ph.id)}"><img src="${esc(thumb(ph.fileId, 480))}" alt="${esc(`${ph.name || '가족'}이 올린 사진`)}" loading="lazy"></button>`).join('')}</div>`;
+    if (limit) return `${grid(list)}${up}`;
+    const byDay = new Map();
+    list.forEach((ph) => { const k = ph.day || ''; if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(ph); });
+    return `${up}${[...byDay.entries()].map(([d, arr]) => `<h3 class="ph-day">${d ? esc(mdw(d)) : '날짜 없음'} <small>${arr.length}장</small></h3>${grid(arr)}`).join('')}`;
+  }
+  function fillAlbum() {
+    view.querySelectorAll('[data-album]').forEach((el) => { el.innerHTML = albumBodyHTML(el.dataset.album === 'home' ? 6 : 0); });
+  }
+  function homeAlbumHTML() {
+    return `<section class="block"><div class="h-row"><h2 class="h">가족 사진첩</h2><a class="count link" href="#album">전체 보기</a></div><div class="card album" data-album="home"></div></section>`;
+  }
+  function renderAlbum() {
+    return `<section class="block">
+        <h1 class="page-title">가족 사진첩</h1>
+        <p class="lede">여행 중에 찍은 사진을 같이 모아요. 올린 사진은 민석 구글 드라이브에 저장되고, 가족 비밀번호를 아는 사람만 볼 수 있어요.</p>
+      </section>
+      <section class="block"><div class="card album" data-album="all"></div></section>`;
+  }
+  view.addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-album-lock]');
+    if (!f) return;
+    e.preventDefault();
+    const v = String(new FormData(f).get('pk') || '').trim();
+    if (!v) return;
+    try { localStorage.setItem(PKEY, v); } catch (err) { /* 무시 */ }
+    photos = null;
+    fillAlbum();
+    loadPhotos();
+  });
+  view.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ph]');
+    if (!b || !photos) return;
+    const ph = photos.find((x) => x.id === b.dataset.ph);
+    if (ph) openLightbox(thumb(ph.fileId, 1600), [ph.name, ph.day ? mdw(ph.day) : ''].filter(Boolean).join(' · '));
+  });
+  async function toJpeg(file, max = 1600) {
+    let src;
+    try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) {
+      src = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(file); });
+    }
+    const w0 = src.width || src.naturalWidth;
+    const h0 = src.height || src.naturalHeight;
+    const k = Math.min(1, max / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w0 * k);
+    c.height = Math.round(h0 * k);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', 0.85);
+    return { data: url.slice(url.indexOf(',') + 1), w: c.width, h: c.height };
+  }
+  view.addEventListener('change', async (e) => {
+    const inp = e.target.closest('input[data-upload]');
+    if (!inp || !inp.files.length) return;
+    const files = [...inp.files].slice(0, 20);
+    inp.value = '';
+    const st = tripState();
+    let ok = 0;
+    for (let i = 0; i < files.length; i += 1) {
+      toast(`사진 올리는 중 ${i + 1} / ${files.length}`);
+      try {
+        const img = await toJpeg(files[i]);
+        const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'photo', key: photoKey(), name: savedName() || '가족', day: st.phase === 'during' ? st.iso : isoOf(today()), ...img }) });
+        const data = await res.json();
+        if (data.ok) ok += 1;
+      } catch (err) { /* 다음 사진 */ }
+    }
+    toast(ok === files.length ? `사진 ${ok}장 올렸어요!` : `${files.length}장 중 ${ok}장 올렸어요`);
+    loadPhotos();
+  });
+
   /* ---------- 탭 전환 ---------- */
-  const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo };
+  const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo, album: renderAlbum, guide: renderGuide };
   const currentTab = () => {
     const h = location.hash.replace('#', '');
     return TABS.includes(h) ? h : 'home';
@@ -1316,6 +1701,8 @@
     foot.textContent = `마지막 업데이트 ${md(T.updated)} · ${T.updatedBy}`;
     initMaps();
     fillFeedback();
+    fillPolls();
+    fillAlbum();
     fillWeather();
     updateTopbar();
     animateIn();
