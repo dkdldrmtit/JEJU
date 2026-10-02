@@ -149,7 +149,7 @@
           <h3 class="day-title">${esc(day.title)}</h3>
           ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선</span></button>` : ''}
         </div>
-        <p class="day-wx" data-wx-chip="${day.date}">${wxChipHTML(day.date)}</p>
+        <button type="button" class="day-wx" data-wx-open="${day.date}" data-wx-chip="${day.date}" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxChipHTML(day.date)}</button>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
         ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : ''}
         ${day.open ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
@@ -203,9 +203,10 @@
   }
 
   /* ---------- 날씨 (Open-Meteo 예보, 못 받으면 평년값) ---------- */
-  const WX_KEY = 'jeju2026.wx.v1';
+  const WX_KEY = 'jeju2026.wx.v2';
   let wxDays = null;
-  try { const c = JSON.parse(localStorage.getItem(WX_KEY)); if (c && c.days) wxDays = c.days; } catch (e) { /* 무시 */ }
+  let wxHours = null; // 날짜별 3시간 간격 예보 [시, 기온, 비%, 날씨코드, 바람 m/s]
+  try { const c = JSON.parse(localStorage.getItem(WX_KEY)); if (c && c.days) { wxDays = c.days; wxHours = c.hours || null; } } catch (e) { /* 무시 */ }
   const WX_ICON = {
     sun: '<svg viewBox="0 0 24 24" class="wx sun" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>',
     partly: '<svg viewBox="0 0 24 24" class="wx partly" aria-hidden="true"><g class="s"><circle cx="9" cy="8.5" r="3.2"/><path d="M9 2.6v1.6M3.1 8.5h1.6M4.8 4.3l1.1 1.1M13.2 4.3l-1.1 1.1"/></g><path class="c" d="M8.5 19.5h8.2a3.6 3.6 0 0 0 .4-7.2 4.8 4.8 0 0 0-9.2 1.3 2.95 2.95 0 0 0 .6 5.9z"/></svg>',
@@ -227,7 +228,7 @@
   }
   function wxOf(iso) {
     const d = wxDays && wxDays[iso];
-    if (d) return { type: wxType(d.code), max: Math.round(d.max), min: Math.round(d.min), pop: d.pop, normal: false };
+    if (d) return { type: wxType(d.code), max: Math.round(d.max), min: Math.round(d.min), pop: d.pop, wind: d.wind != null ? Math.round(d.wind) : null, normal: false };
     const N = T.weather.normal;
     return { type: 'partly', max: N.max, min: N.min, pop: null, normal: true };
   }
@@ -244,7 +245,7 @@
     view.querySelectorAll('[data-rain]').forEach((el) => { const d = T.days.find((x) => x.date === el.dataset.rain); if (d) el.outerHTML = rainBoxHTML(d); });
   }
   function wxListHTML() {
-    return T.days.map((d) => { const w = wxOf(d.date); return `<li><span class="wl-d">${esc(mdw(d.date))}</span><span class="wl-i">${WX_ICON[w.type]}</span><span class="wl-l">${w.normal ? '평년' : WX_LABEL[w.type]}</span><span class="wl-t">${w.max}° / ${w.min}°</span><span class="wl-p">${w.pop != null ? `비 ${w.pop}%` : ''}</span></li>`; }).join('');
+    return T.days.map((d) => { const w = wxOf(d.date); return `<li data-wx-open="${d.date}" role="button" tabindex="0"><span class="wl-d">${esc(mdw(d.date))}</span><span class="wl-i">${WX_ICON[w.type]}</span><span class="wl-l">${w.normal ? '평년' : WX_LABEL[w.type]}</span><span class="wl-t">${w.max}° / ${w.min}°</span><span class="wl-p">${w.pop != null ? `비 ${w.pop}%` : ''}</span></li>`; }).join('');
   }
   async function loadWeather() {
     try {
@@ -253,14 +254,23 @@
     } catch (e) { /* 무시 */ }
     const { lat, lon } = T.weather.point;
     try {
-      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul&forecast_days=16`);
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=16`);
       const j = await res.json();
       const D = j.daily;
       const days = {};
-      D.time.forEach((t, i) => { if (dates.includes(t)) days[t] = { code: D.weather_code[i], max: D.temperature_2m_max[i], min: D.temperature_2m_min[i], pop: D.precipitation_probability_max[i] }; });
+      D.time.forEach((t, i) => { if (dates.includes(t) && D.temperature_2m_max[i] != null) days[t] = { code: D.weather_code[i], max: D.temperature_2m_max[i], min: D.temperature_2m_min[i], pop: D.precipitation_probability_max[i], wind: D.wind_speed_10m_max ? D.wind_speed_10m_max[i] : null }; });
+      const hours = {};
+      const H = j.hourly || { time: [] };
+      H.time.forEach((t, i) => {
+        const [d, hh] = t.split('T');
+        const h = Number(hh.slice(0, 2));
+        if (!dates.includes(d) || h % 3 || h < 6 || H.temperature_2m[i] == null) return;
+        (hours[d] = hours[d] || []).push([h, Math.round(H.temperature_2m[i]), H.precipitation_probability[i], H.weather_code[i], H.wind_speed_10m[i] != null ? Math.round(H.wind_speed_10m[i]) : null]);
+      });
       if (Object.keys(days).length) {
         wxDays = days;
-        try { localStorage.setItem(WX_KEY, JSON.stringify({ at: Date.now(), days })); } catch (e) { /* 무시 */ }
+        wxHours = hours;
+        try { localStorage.setItem(WX_KEY, JSON.stringify({ at: Date.now(), days, hours })); } catch (e) { /* 무시 */ }
         fillWeather();
       }
     } catch (e) { /* 예보를 못 받으면 평년값 그대로 */ }
@@ -293,7 +303,7 @@
       }
       const night = day.night ? stays.get(day.night).short : '집';
       return `<a class="pl-col${isToday ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}" href="#plan" data-goto="day-${day.date}" aria-label="${esc(`${mdw(day.date)} ${day.title}`)}">
-        <span class="pl-head"><span class="pl-wd">${wd(day.date)}</span><b>${dom(day.date)}</b><span class="pl-wx" data-wx="${day.date}">${wxMiniHTML(day.date)}</span></span>
+        <span class="pl-head"><span class="pl-wd">${wd(day.date)}</span><b>${dom(day.date)}</b><span class="pl-wx" data-wx="${day.date}" data-wx-open="${day.date}" role="button" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxMiniHTML(day.date)}</span></span>
         <span class="pl-body">${blocks}${now}</span>
         <span class="pl-night">${esc(night)}</span>
       </a>`;
@@ -1688,6 +1698,69 @@
     }
     toast(ok === files.length ? `사진 ${ok}장 올렸어요!` : `${files.length}장 중 ${ok}장 올렸어요`);
     loadPhotos();
+  });
+
+  /* ---------- 날씨 자세히 (날씨를 누르면 아래에서 올라오는 창) ---------- */
+  const wxSheet = document.createElement('div');
+  wxSheet.className = 'sheet';
+  wxSheet.hidden = true;
+  wxSheet.setAttribute('role', 'dialog');
+  wxSheet.setAttribute('aria-modal', 'true');
+  document.body.appendChild(wxSheet);
+  // 그날 머무는 동네 기준으로 네이버 날씨 검색
+  const wxPlaceOf = (iso) => { const d = T.days.find((x) => x.date === iso); return d && d.night === 'shilla' ? '중문동' : '안덕면'; };
+  function wxTips(w) {
+    const tips = [];
+    if (w.normal) return tips;
+    if (w.pop != null && w.pop >= 50) tips.push('비 소식 · 우산 챙기고 실내 위주로 (일정 카드에 실내 후보 있어요)');
+    else if (w.pop != null && w.pop >= 30) tips.push('비가 올 수도 있어요 · 우산 하나 챙겨요');
+    if (w.wind != null && w.wind >= 9) tips.push(`바람이 세요 (최대 ${w.wind}m/s) · 해안길 · 오름은 조심`);
+    if (w.max >= 26) tips.push('낮엔 더워요 · 태오는 얇게, 물 자주');
+    if (w.min <= 16) tips.push('아침저녁 쌀쌀해요 · 겉옷 · 태오 담요');
+    return tips;
+  }
+  function openWxSheet(iso) {
+    const w = wxOf(iso);
+    const hrs = (wxHours && wxHours[iso]) || [];
+    const naver = `https://m.search.naver.com/search.naver?query=${encodeURIComponent(`${wxPlaceOf(iso)} 날씨`)}`;
+    const tips = wxTips(w);
+    wxSheet.innerHTML = `<div class="sheet-panel" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="ws-head">
+        <span class="ws-ic">${WX_ICON[w.type]}</span>
+        <div><p class="ws-day">${esc(mdw(iso))} · ${esc(wxPlaceOf(iso))}</p>
+          <p class="ws-main"><b>${w.normal ? '평년' : WX_LABEL[w.type]}</b> ${w.max}° / ${w.min}°</p>
+          <p class="ws-sub">${w.normal ? '아직 예보가 없어서 10월 중순 평년값이에요' : [w.pop != null ? `비 올 확률 ${w.pop}%` : '', w.wind != null ? `바람 최대 ${w.wind}m/s` : ''].filter(Boolean).join(' · ')}</p></div>
+        <button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button>
+      </div>
+      ${hrs.length ? `<ol class="ws-hours">${hrs.map(([h, t, p, c, wd]) => `<li><span class="wh-h">${h}시</span>${WX_ICON[wxType(c)]}<b>${t}°</b><span class="wh-p${p >= 50 ? ' hi' : ''}">${p != null ? `${p}%` : ''}</span><span class="wh-w">${wd != null ? `${wd}m/s` : ''}</span></li>`).join('')}</ol>` : ''}
+      ${tips.length ? `<ul class="ws-tips">${tips.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      <a class="ws-naver" href="${esc(naver)}" target="_blank" rel="noopener"><span class="ws-n">N</span>네이버 날씨에서 자세히 보기</a>
+      <p class="ws-src">이 화면 예보는 Open-Meteo(세계 기상 모델) 기준이에요. 네이버 날씨는 기상청 예보라 조금 다를 수 있어요.</p>
+    </div>`;
+    wxSheet.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+    wxSheet.querySelector('.sheet-x').focus();
+  }
+  function closeWxSheet() {
+    wxSheet.classList.remove('in');
+    document.documentElement.classList.remove('lb-open');
+    setTimeout(() => { wxSheet.hidden = true; }, 220);
+  }
+  wxSheet.addEventListener('click', (e) => { if (e.target === wxSheet || e.target.closest('[data-sheet-close]')) closeWxSheet(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wxSheet.hidden) closeWxSheet(); });
+  // 계획표 칸은 링크라서, 날씨를 누를 땐 링크 대신 날씨 창을 엶 (캡처 단계에서 먼저 가로챔)
+  view.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-wx-open]');
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openWxSheet(el.dataset.wxOpen);
+  }, true);
+  view.addEventListener('keydown', (e) => {
+    const el = e.target.closest && e.target.closest('li[data-wx-open]');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openWxSheet(el.dataset.wxOpen); }
   });
 
   /* ---------- 탭 전환 ---------- */
