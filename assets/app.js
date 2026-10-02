@@ -68,6 +68,12 @@
     return `<a class="naver${small ? ' small' : ''}" href="https://map.naver.com/p/search/${encodeURIComponent(q)}" target="_blank" rel="noopener">${ICON.pin}<span>네이버 지도</span></a>`;
   }
 
+  // 카드 오른쪽에 붙는 작은 지도 단추 (내용이 아래로 밀리지 않게)
+  function naverSide(q) {
+    if (!q) return '';
+    return `<a class="naver side" href="https://map.naver.com/p/search/${encodeURIComponent(q)}" target="_blank" rel="noopener" aria-label="${esc(q)} 네이버 지도">${ICON.pin}<span>지도</span></a>`;
+  }
+
   function membersOf(who) {
     if (!who || who === 'all') return T.people;
     if (Array.isArray(who)) return who.map((id) => people.get(id)).filter(Boolean);
@@ -105,10 +111,11 @@
     return `<li class="item s-${status}">
       <span class="time${hasTime ? ' is-set' : ''}">${esc(it.time || it.when || '미정')}</span>
       <div class="what">
-        <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}</p>
-        ${sub ? `<p class="note">${esc(sub)}</p>` : ''}
+        <div class="row-head"><div>
+          <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}</p>
+          ${sub ? `<p class="note">${esc(sub)}</p>` : ''}
+        </div>${it.place ? naverSide(it.place) : ''}</div>
         ${photoOf(it.photo) ? `<figure class="item-photo"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
-        ${it.place ? naverLink(it.place, true) : ''}
       </div>
     </li>`;
   }
@@ -312,11 +319,10 @@
   function bookingsHTML() {
     const rows = T.bookings.map((b) => `<li class="card booking">
       <span class="booking-icon${b.accent ? ' t' : ''}">${ICON[b.icon] || ''}</span>
-      <div>
+      <div class="row-head"><div>
         <h3>${esc(b.title)} ${pill(b.status)}</h3>
         <p class="meta">${esc(b.meta)}</p>
-        ${b.q ? naverLink(b.q) : ''}
-      </div>
+      </div>${naverSide(b.q)}</div>
     </li>`).join('');
     return `<section class="block">
       <h2 class="h">정해진 것</h2>
@@ -592,9 +598,8 @@
   function renderPlan() {
     const st = tripState();
     const undated = T.undated.map((u) => `<li class="card undated">
-      <h3>${esc(u.title)} ${pill(u.status)}</h3>
+      <div class="row-head"><h3>${esc(u.title)} ${pill(u.status)}</h3>${naverSide(u.q)}</div>
       <p class="note">${esc(whoText(u.who))}${u.note ? ` · ${esc(u.note)}` : ''}</p>
-      ${naverLink(u.q)}
     </li>`).join('');
 
     return `<section class="block">
@@ -617,10 +622,9 @@
   /* ---------- 후보 ---------- */
   function renderIdeas() {
     const ideaCard = (x) => `<li class="card idea">
-      <h3>${esc(x.name)}</h3>
+      <div class="row-head"><h3>${esc(x.name)}</h3>${naverSide(x.q || x.name)}</div>
       <p>${esc(x.desc)}</p>
       <div class="tags">${(x.tags || []).map((t) => `<span class="tag ${t.kind || ''}">${esc(t.text)}</span>`).join('')}</div>
-      ${naverLink(x.q || x.name)}
     </li>`;
     return `<section class="block">
         <h1 class="page-title">가볼 곳 · 먹을 곳</h1>
@@ -768,7 +772,7 @@
     </li>`).join('');
 
     const staysHTML = T.stays.map((s) => `<li class="card info-card">
-      <h3>${esc(s.name)}</h3>
+      <div class="row-head"><h3>${esc(s.name)}</h3>${naverSide(s.q)}</div>
       <p class="sub">${esc(s.room)} · ${esc(whoText(s.who))}</p>
       <dl class="facts">
         <dt>체크인</dt><dd>${esc(mdw(s.checkIn.date))}${s.checkIn.time ? ` ${esc(s.checkIn.time)}` : ''}</dd>
@@ -776,12 +780,11 @@
         ${s.address ? `<dt>주소</dt><dd>${esc(s.address)}</dd>` : ''}
       </dl>
       ${s.notes && s.notes.length ? `<ul class="bullets" style="margin-top:12px">${s.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
-      ${naverLink(s.q)}
     </li>`).join('');
 
     const C = T.car;
     const carHTML = `<div class="card info-card">
-      <h3>${esc(C.model)}</h3>
+      <div class="row-head"><h3>${esc(C.model)}</h3>${naverSide(C.company)}</div>
       <p class="sub">${esc([C.company, `운전 ${C.driver}`].filter(Boolean).join(' · '))}</p>
       <dl class="facts">
         ${C.detail ? `<dt>차량</dt><dd>${esc(C.detail)}</dd>` : ''}
@@ -792,7 +795,6 @@
         <dt>좌석</dt><dd>${esc(C.seats)}</dd>
       </dl>
       ${C.notes && C.notes.length ? `<ul class="bullets" style="margin-top:12px">${C.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
-      ${naverLink(C.company)}
     </div>`;
 
     const W = T.weather;
@@ -812,11 +814,10 @@
       <p class="sub">${esc(E.lead)}</p>
       <dl class="facts">${E.numbers.map(([k, v]) => `<dt>${esc(k)}</dt><dd><span class="num">${esc(v)}</span></dd>`).join('')}</dl>
       <ul class="hosp">${E.hospitals.map((h) => `<li>
-        <b>${esc(h.name)}</b>
+        <div class="row-head"><b>${esc(h.name)}</b>${naverSide(h.q || h.name)}</div>
         <p>${esc(h.desc)}</p>
         ${h.tel ? `<p>대표번호 <a class="tel" href="tel:${esc(h.tel.replace(/-/g, ''))}">${esc(h.tel)}</a></p>` : ''}
         ${h.address ? `<p>${esc(h.address)}</p>` : ''}
-        ${naverLink(h.q || h.name)}
       </li>`).join('')}</ul>
       ${E.note ? `<p class="tip">${esc(E.note)}</p>` : ''}
     </div>`;
@@ -1002,7 +1003,11 @@
     try {
       const res = await fetch(`${FB.endpoint}?t=${Date.now()}`);
       const data = await res.json();
-      fbItems = (data.items || []).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+      fbItems = (data.items || []).map((it) => {
+        // 구글 시트가 'YYYY-MM-DD' 를 날짜로 바꿔서 돌려주는 경우가 있어 다시 날짜 글자로
+        if (it.day && !/^\d{4}-\d{2}-\d{2}$/.test(it.day)) { const d = new Date(it.day); it.day = Number.isNaN(d.getTime()) ? '' : isoOf(d); }
+        return it;
+      }).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
       backendV = data.v || 1;
       if (data.votes) votes = data.votes;
       photosOn = Boolean(data.photosOn);
@@ -1454,9 +1459,9 @@
     const w = wxOf(day.date);
     const rainy = isRainy(day.date);
     const head = rainy ? `비 소식${w.pop != null ? ` ${w.pop}%` : ''} · 실내로 가요` : '비 오면 갈 실내 후보';
-    return `<details class="xbox rain${rainy ? ' on' : ''}" data-rain="${day.date}"${rainy ? ' open' : ''}>
+    return `<details class="xbox rain${rainy ? ' on' : ''}" data-rain="${day.date}">
       <summary>${WX_ICON.rain}<span>${esc(head)}</span><em>${R.items.length}곳</em></summary>
-      <ul class="xlist">${R.items.map((x) => `<li><div><b>${esc(x.name)}</b><p>${esc([x.drive, x.desc].filter(Boolean).join(' · '))}</p></div>${naverLink(x.q || x.name, true)}</li>`).join('')}</ul>
+      <ul class="xlist">${R.items.map((x) => `<li><div><b>${esc(x.name)}</b><p>${esc([x.drive, x.desc].filter(Boolean).join(' · '))}</p></div>${naverSide(x.q || x.name)}</li>`).join('')}</ul>
     </details>`;
   }
 
@@ -1483,7 +1488,7 @@
         ${Object.values(B.spots || {}).map((s) => `<li class="card info-card"><h3>${esc(s.name)}</h3><ul class="bullets">${s.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></li>`).join('')}
         ${B.clinics && B.clinics.length ? `<li class="card info-card emergency"><h3>태오가 아플 때</h3>
           ${B.clinicLead ? `<p class="sub">${esc(B.clinicLead)}</p>` : ''}
-          <ul class="hosp">${B.clinics.map((h) => `<li><b>${esc(h.name)}</b><p>${esc(h.desc)}</p>${h.address ? `<p>${esc(h.address)}</p>` : ''}${naverLink(h.q || h.name)}</li>`).join('')}</ul>
+          <ul class="hosp">${B.clinics.map((h) => `<li><div class="row-head"><b>${esc(h.name)}</b>${naverSide(h.q || h.name)}</div><p>${esc(h.desc)}</p>${h.address ? `<p>${esc(h.address)}</p>` : ''}</li>`).join('')}</ul>
           ${B.clinicTip ? `<p class="tip">${esc(B.clinicTip)}</p>` : ''}</li>` : ''}
       </ul>
       ${B.src ? `<p class="src">출처 · ${esc(B.src)}</p>` : ''}
@@ -1530,7 +1535,8 @@
             const top = lead && !lead.tie && lead.opt.id === o.id;
             return `<li class="${top ? 'top' : ''}">
               <div class="po-t"><b>${esc(o.name)}${top ? ' <span class="po-1">1등</span>' : ''}</b><p>${esc([o.drive, o.desc].filter(Boolean).join(' · '))}</p>
-                ${vs.length ? `<p class="po-who">${esc(vs.join(' · '))}</p>` : ''}${naverLink(o.q || o.name, true)}</div>
+                ${vs.length ? `<p class="po-who">${esc(vs.join(' · '))}</p>` : ''}</div>
+              ${naverSide(o.q || o.name)}
               <button type="button" class="heart${mine ? ' on' : ''}" data-vote="${esc(p.id)}|${esc(o.id)}" aria-pressed="${mine ? 'true' : 'false'}" aria-label="${esc(o.name)} 하트"${!ready || closed ? ' disabled' : ''}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.8 3.9 4.5 7.3 4.5c2 0 3.6 1.1 4.7 2.7 1.1-1.6 2.7-2.7 4.7-2.7 3.4 0 5.6 3.3 4.5 6.6-1.7 4.8-9.2 9.4-9.2 9.4z"/></svg><span>${vs.length}</span>
               </button>

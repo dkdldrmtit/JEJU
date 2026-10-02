@@ -44,6 +44,8 @@ function clean_(v, n) {
   return s;
 }
 const iso_ = (v) => (v instanceof Date ? v.toISOString() : String(v));
+// 시트가 'YYYY-MM-DD' 를 날짜로 바꿔 저장해도 다시 글자로 돌려줌
+const day_ = (v) => (v instanceof Date ? Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd') : String(v || ''));
 const prop_ = (k) => PropertiesService.getScriptProperties().getProperty(k);
 const photoOk_ = (key) => { const k = prop_('PHOTO_KEY'); return Boolean(k) && String(key || '') === k; };
 
@@ -62,7 +64,7 @@ function photos_() {
   const rows = sheetOf_(PHOTO_SHEET, PHOTO_HEAD).getDataRange().getValues().slice(1);
   return rows
     .filter((r) => r[0] && r[4] && !r[7])
-    .map((r) => ({ id: String(r[0]), ts: iso_(r[1]), name: String(r[2]), day: String(r[3]), fileId: String(r[4]), w: Number(r[5]) || 0, h: Number(r[6]) || 0 }))
+    .map((r) => ({ id: String(r[0]), ts: iso_(r[1]), name: String(r[2]), day: day_(r[3]), fileId: String(r[4]), w: Number(r[5]) || 0, h: Number(r[6]) || 0 }))
     .reverse();
 }
 
@@ -78,7 +80,7 @@ function doGet(e) {
     .map((r) => ({
       id: String(r[0]),
       ts: iso_(r[1]),
-      name: String(r[2]), day: String(r[3]), text: String(r[4]).replace(/^'/, ''), link: String(r[5]),
+      name: String(r[2]), day: day_(r[3]), text: String(r[4]).replace(/^'/, ''), link: String(r[5]),
       ai: String(r[6]).replace(/^'/, ''), aiLink: String(r[7]),
     }));
   return out_({ v: VERSION, items, votes: votes_(), photosOn: Boolean(prop_('PHOTO_KEY')) });
