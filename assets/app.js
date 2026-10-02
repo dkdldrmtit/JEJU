@@ -1680,6 +1680,17 @@
     const url = c.toDataURL('image/jpeg', 0.85);
     return { data: url.slice(url.indexOf(',') + 1), w: c.width, h: c.height };
   }
+  // 실패하면 이유를 사람 말로 (구글 오류 화면은 HTML 로 와서 글자만 뽑아냄)
+  function uploadErr(raw) {
+    const t = String(raw || '');
+    if (/authoriz|권한|permission|DriveApp/i.test(t)) return '구글 드라이브 권한이 아직 없어요 (민석이 Apps Script 에서 허용해야 해요)';
+    if (t === 'key') return '가족 비밀번호가 달라요';
+    if (t === 'bad image') return '사진 파일을 읽지 못했어요';
+    if (t === 'convert') return '이 사진은 변환이 안 돼요. 다른 사진으로 해 보세요';
+    if (t === 'net') return '인터넷 연결을 확인해 주세요';
+    const m = /(Exception|Error)[^<]{0,120}/.exec(t.replace(/<[^>]+>/g, ' '));
+    return m ? m[0].trim() : t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  }
   view.addEventListener('change', async (e) => {
     const inp = e.target.closest('input[data-upload]');
     if (!inp || !inp.files.length) return;
@@ -1687,17 +1698,31 @@
     inp.value = '';
     const st = tripState();
     let ok = 0;
+    let lastErr = '';
     for (let i = 0; i < files.length; i += 1) {
       toast(`사진 올리는 중 ${i + 1} / ${files.length}`);
+      let img;
+      try { img = await toJpeg(files[i]); } catch (err) { lastErr = 'convert'; continue; }
       try {
-        const img = await toJpeg(files[i]);
         const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'photo', key: photoKey(), name: savedName() || '가족', day: st.phase === 'during' ? st.iso : isoOf(today()), ...img }) });
-        const data = await res.json();
-        if (data.ok) ok += 1;
-      } catch (err) { /* 다음 사진 */ }
+        const txt = await res.text();
+        let data = null;
+        try { data = JSON.parse(txt); } catch (err) { lastErr = txt; }
+        if (data && data.ok) ok += 1;
+        else if (data) lastErr = data.error || 'fail';
+      } catch (err) { lastErr = 'net'; }
     }
-    toast(ok === files.length ? `사진 ${ok}장 올렸어요!` : `${files.length}장 중 ${ok}장 올렸어요`);
-    loadPhotos();
+    const why = ok === files.length ? '' : uploadErr(lastErr);
+    toast(ok === files.length ? `사진 ${ok}장 올렸어요!` : `${files.length}장 중 ${ok}장 올렸어요 · ${why}`);
+    if (why) {
+      // 토스트는 금방 사라지니 사진첩 안에도 남겨둠
+      view.querySelectorAll('[data-album]').forEach((el) => {
+        let p = el.querySelector('.album-err');
+        if (!p) { p = document.createElement('p'); p.className = 'fb-status album-err'; el.prepend(p); }
+        p.textContent = `올리지 못한 이유: ${why}`;
+      });
+    }
+    if (ok) loadPhotos();
   });
 
   /* ---------- 날씨 자세히 (날씨를 누르면 아래에서 올라오는 창) ---------- */

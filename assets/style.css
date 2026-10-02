@@ -823,8 +823,8 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px); z-index: 30;
   transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
-  background: var(--ink); color: var(--bg); font-size: var(--fs-base); font-weight: 600; padding: 11px 18px; border-radius: 999px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / .18); transition: transform .35s var(--ease), opacity .3s; white-space: nowrap;
+  background: var(--ink); color: var(--bg); font-size: var(--fs-base); font-weight: 600; padding: 11px 18px; border-radius: 22px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .18); transition: transform .35s var(--ease), opacity .3s; width: max-content; max-width: calc(100vw - 32px); text-align: center; text-wrap: balance;
 }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
