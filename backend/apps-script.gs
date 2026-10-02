@@ -12,7 +12,7 @@
  *  - 사진은 스크립트 속성 PHOTO_KEY(가족 비밀번호)를 아는 사람만 보고 올릴 수 있어요.
  *  - hidden 칸에 아무 글자나 적으면 사이트에서 숨겨져요.
  */
-const VERSION = 2;
+const VERSION = 3;
 const SHEET_NAME = '의견';
 const HEAD = ['id', 'ts', 'name', 'day', 'text', 'link', 'ai', 'aiLink', 'hidden'];
 const VOTE_SHEET = '투표';
@@ -68,8 +68,24 @@ function photos_() {
     .reverse();
 }
 
+// ▶ 처음 한 번: 편집기 위쪽에서 이 함수(setupPhotos)를 골라 '실행' → 구글 드라이브 권한 허용
+function setupPhotos() {
+  const it = DriveApp.getFoldersByName(PHOTO_FOLDER);
+  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(PHOTO_FOLDER);
+  Logger.log('사진첩 폴더 준비 완료: ' + folder.getUrl());
+}
+
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  // 사진 저장 준비 상태 확인용 (사진 내용은 안 보여줌)
+  if (p.type === 'check') {
+    try {
+      DriveApp.getFoldersByName(PHOTO_FOLDER).hasNext();
+      return out_({ ok: true, v: VERSION, drive: true, photosOn: Boolean(prop_('PHOTO_KEY')) });
+    } catch (err) {
+      return out_({ ok: false, v: VERSION, drive: false, error: String((err && err.message) || err).slice(0, 300) });
+    }
+  }
   if (p.type === 'photos') {
     if (!photoOk_(p.key)) return out_({ ok: false, error: prop_('PHOTO_KEY') ? 'key' : 'off' });
     return out_({ ok: true, photos: photos_() });
@@ -92,26 +108,38 @@ function doPost(e) {
 
   // 사진은 크기가 커서 잠금 밖에서 드라이브에 먼저 저장
   if (body.action === 'photo') {
-    if (!photoOk_(body.key)) return out_({ ok: false, error: 'key' });
-    const data = String(body.data || '');
-    if (!/^[A-Za-z0-9+/=]+$/.test(data) || data.length > 8 * 1024 * 1024) return out_({ ok: false, error: 'bad image' });
-    const it = DriveApp.getFoldersByName(PHOTO_FOLDER);
-    const folder = it.hasNext() ? it.next() : DriveApp.createFolder(PHOTO_FOLDER);
-    const id = Utilities.getUuid().slice(0, 8);
-    const blob = Utilities.newBlob(Utilities.base64Decode(data), 'image/jpeg', `${id}.jpg`);
-    const file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    const day = /^\d{4}-\d{2}-\d{2}$/.test(String(body.day || '')) ? body.day : '';
-    const lock = LockService.getScriptLock();
-    lock.waitLock(10000);
     try {
-      sheetOf_(PHOTO_SHEET, PHOTO_HEAD).appendRow([id, new Date(), clean_(body.name, 20), day, file.getId(), Number(body.w) || 0, Number(body.h) || 0, '']);
-    } finally {
-      lock.releaseLock();
+      return savePhoto_(body);
+    } catch (err) {
+      // 오류가 나도 사이트가 읽을 수 있게 JSON 으로 이유를 돌려줌
+      return out_({ ok: false, error: String((err && err.message) || err).slice(0, 300) });
     }
-    return out_({ ok: true, id, fileId: file.getId() });
   }
+  return handle_(body);
+}
 
+function savePhoto_(body) {
+  if (!photoOk_(body.key)) return out_({ ok: false, error: 'key' });
+  const data = String(body.data || '');
+  if (!/^[A-Za-z0-9+/=]+$/.test(data) || data.length > 8 * 1024 * 1024) return out_({ ok: false, error: 'bad image' });
+  const it = DriveApp.getFoldersByName(PHOTO_FOLDER);
+  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(PHOTO_FOLDER);
+  const id = Utilities.getUuid().slice(0, 8);
+  const blob = Utilities.newBlob(Utilities.base64Decode(data), 'image/jpeg', `${id}.jpg`);
+  const file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(body.day || '')) ? body.day : '';
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    sheetOf_(PHOTO_SHEET, PHOTO_HEAD).appendRow([id, new Date(), clean_(body.name, 20), day, file.getId(), Number(body.w) || 0, Number(body.h) || 0, '']);
+  } finally {
+    lock.releaseLock();
+  }
+  return out_({ ok: true, id, fileId: file.getId() });
+}
+
+function handle_(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {

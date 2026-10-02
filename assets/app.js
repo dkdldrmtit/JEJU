@@ -1687,7 +1687,7 @@
     if (t === 'key') return '가족 비밀번호가 달라요';
     if (t === 'bad image') return '사진 파일을 읽지 못했어요';
     if (t === 'convert') return '이 사진은 변환이 안 돼요. 다른 사진으로 해 보세요';
-    if (t === 'net') return '인터넷 연결을 확인해 주세요';
+    if (t === 'net') return '서버에서 오류가 났어요 (구글 드라이브 권한 문제일 수 있어요)';
     const m = /(Exception|Error)[^<]{0,120}/.exec(t.replace(/<[^>]+>/g, ' '));
     return m ? m[0].trim() : t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
   }
