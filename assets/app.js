@@ -8,7 +8,7 @@
   const foot = document.getElementById('foot');
   const tabLinks = document.querySelectorAll('.tabbar a');
 
-  const TABS = ['home', 'plan', 'ideas', 'pack', 'info', 'album', 'guide']; // album · guide 는 탭바 없이 링크로만
+  const TABS = ['home', 'plan', 'ideas', 'album', 'info', 'pack', 'guide']; // pack · guide 는 탭바 없이 링크로만
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const STATUS = { ok: '확정', plan: '예정', tbd: '미정', idea: '후보' };
   const PACK_KEY = 'jeju2026.packing.v1';
@@ -688,6 +688,7 @@
     }).join('');
 
     return `<section class="block">
+        <a class="back-link" href="#info">← 정보</a>
         <h1 class="page-title">준비물</h1>
         <p class="lede">체크 표시는 지금 보고 있는 휴대폰에만 저장돼요. 각자 폰에서 체크하면 돼요.</p>
       </section>
@@ -838,6 +839,9 @@
       </section>
       <section class="block"><h2 class="h">누가 언제 오고 가요</h2><ul class="stack">${groupsHTML}</ul>
         ${T.guideB ? `<a class="btn-link" href="#guide">${esc(T.guideB.linkText || '후발대 안내 보기')}</a>` : ''}</section>
+      <section class="block"><h2 class="h">준비물</h2>
+        <a class="card map-teaser" href="#pack"><span class="mt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/></svg></span><span class="mt-t"><b>준비물 체크리스트</b><small>모두 · 태오 · 운전 — 체크는 각자 휴대폰에 저장</small></span><svg class="mt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+      </section>
       <section class="block"><h2 class="h">숙소</h2><ul class="stack">${staysHTML}</ul></section>
       <section class="block"><h2 class="h">렌터카</h2>${carHTML}</section>
       <section class="block"><h2 class="h">날씨</h2>${weatherHTML}</section>
@@ -1421,7 +1425,10 @@
     if (G && t <= toDate(G.until || T.end)) tiles.push(`<a class="qt" href="#guide"><span class="qt-ic">${ICON.plane}</span><b>후발대 안내</b><small>${esc(G.tile || '도착 · 출발 한눈에')}</small></a>`);
     const openPolls = (T.polls || []).filter((p) => t <= toDate(p.closes));
     if (openPolls.length) tiles.push(`<a class="qt" href="#ideas" data-goto="polls"><span class="qt-ic">${ICON.meal}</span><b>저녁 투표</b><small>${esc(openPolls.map((p) => p.short || p.title).join(' · '))}</small></a>`);
-    tiles.push(`<a class="qt" href="#album"><span class="qt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 8"/></svg></span><b>가족 사진첩</b><small>${st.phase === 'before' ? '여행 가서 같이 모아요' : '찍은 사진 올리기'}</small></a>`);
+    // 준비물은 탭에서 빠졌으니 바로가기로 (체크 개수도 같이)
+    const all = T.packing.reduce((n, sec) => n + sec.items.length, 0);
+    const done = T.packing.reduce((n, sec) => n + sec.items.filter((it) => packState[packKey(sec, it)]).length, 0);
+    tiles.push(`<a class="qt" href="#pack"><span class="qt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/></svg></span><b>준비물</b><small>${done ? `${done} / ${all} 챙김` : `${all}가지 체크리스트`}</small></a>`);
     return `<section class="block"><div class="quick q${tiles.length}">${tiles.join('')}</div></section>`;
   }
 
@@ -1811,8 +1818,9 @@
   function render() {
     const tab = currentTab();
     view.innerHTML = RENDER[tab]();
+    const lit = { pack: 'info', guide: 'home' }[tab] || tab; // 탭바에 없는 페이지는 들어온 탭에 불을 켬
     tabLinks.forEach((a) => {
-      if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page');
+      if (a.dataset.tab === lit) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
     });
     foot.textContent = `마지막 업데이트 ${md(T.updated)} · ${T.updatedBy}`;

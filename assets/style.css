@@ -1158,3 +1158,7 @@ button.day-wx .wx-chip::after { content: "›"; margin-left: 2px; color: var(--m
 .ws-n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: #fff; color: #03C75A; font-weight: 900; font-size: .85rem; }
 .ws-naver:active { transform: scale(.98); }
 .ws-src { margin-top: 10px; font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+
+/* 탭바에 없는 페이지에서 돌아가기 */
+.back-link { display: inline-block; margin-bottom: 6px; font-size: var(--fs-sm); font-weight: 700; color: var(--sea-ink); text-decoration: none; }
+a.map-teaser { text-decoration: none; }
