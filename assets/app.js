@@ -1108,7 +1108,7 @@
     document.documentElement.classList.add('lb-open');
     lb.querySelector('.lb-close').focus();
   }
-  function closeLightbox() { lb.hidden = true; document.documentElement.classList.remove('lb-open'); }
+  function closeLightbox() { lb.hidden = true; lb.querySelector('img').onerror = null; document.documentElement.classList.remove('lb-open'); }
   lb.addEventListener('click', closeLightbox);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lb.hidden) closeLightbox(); });
 
@@ -1601,7 +1601,16 @@
   let photos = null;
   let photoErr = '';
   const photoKey = () => { try { return localStorage.getItem(PKEY) || ''; } catch (e) { return ''; } };
-  const thumb = (id, w) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+  // 구글 드라이브 사진 주소: 컴퓨터 브라우저에서 구글에 로그인돼 있으면 drive.google.com 주소가 로그인 화면으로 넘어가 깨져서,
+  // 로그인과 상관없는 lh3 주소를 먼저 쓰고 안 되면 drive 주소로 한 번 더 시도
+  const thumb = (id, w) => `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w${w}`;
+  const thumbAlt = (id, w) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+  view.addEventListener('error', (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement) || !img.dataset.alt || img.dataset.tried) return;
+    img.dataset.tried = '1';
+    img.src = img.dataset.alt;
+  }, true);
   async function loadPhotos() {
     const key = photoKey();
     if (!FB.endpoint || !key) { fillAlbum(); return; }
@@ -1629,7 +1638,7 @@
     const list = limit ? photos.slice(0, limit) : photos;
     const up = `<label class="btn primary album-up"><input type="file" accept="image/*" multiple data-upload hidden>＋ 사진 올리기</label>`;
     if (!photos.length) return `<p class="album-empty">아직 사진이 없어요. 첫 사진을 올려주세요!</p>${up}`;
-    const grid = (arr) => `<div class="ph-grid">${arr.map((ph) => `<button type="button" class="ph" data-ph="${esc(ph.id)}"><img src="${esc(thumb(ph.fileId, 480))}" alt="${esc(`${ph.name || '가족'}이 올린 사진`)}" loading="lazy"></button>`).join('')}</div>`;
+    const grid = (arr) => `<div class="ph-grid">${arr.map((ph) => `<button type="button" class="ph" data-ph="${esc(ph.id)}"><img src="${esc(thumb(ph.fileId, 480))}" data-alt="${esc(thumbAlt(ph.fileId, 480))}" alt="${esc(`${ph.name || '가족'}이 올린 사진`)}" loading="lazy" referrerpolicy="no-referrer"></button>`).join('')}</div>`;
     if (limit) return `${grid(list)}${up}`;
     const byDay = new Map();
     list.forEach((ph) => { const k = ph.day || ''; if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(ph); });
@@ -1663,7 +1672,11 @@
     const b = e.target.closest('[data-ph]');
     if (!b || !photos) return;
     const ph = photos.find((x) => x.id === b.dataset.ph);
-    if (ph) openLightbox(thumb(ph.fileId, 1600), [ph.name, ph.day ? mdw(ph.day) : ''].filter(Boolean).join(' · '));
+    if (!ph) return;
+    const im = lb.querySelector('img');
+    im.referrerPolicy = 'no-referrer';
+    im.onerror = () => { im.onerror = null; im.src = thumbAlt(ph.fileId, 1600); };
+    openLightbox(thumb(ph.fileId, 1600), [ph.name, ph.day ? mdw(ph.day) : ''].filter(Boolean).join(' · '));
   });
   async function toJpeg(file, max = 1600) {
     let src;
