@@ -164,14 +164,35 @@
     </article>`;
   }
 
+  /* ---------- 화면마다 인사하는 태오 스티커 ---------- */
+  const taeoSrc = (s) => `assets/photos/taeo/${s.img}.webp`;
+  const sayOf = (s, not) => { const L = s.says || []; if (L.length < 2) return L[0] || ''; let x; do { x = L[Math.floor(Math.random() * L.length)]; } while (x === not); return x; };
+  function peekHTML(key) {
+    const s = T.taeo && T.taeo[key];
+    if (!s) return '';
+    return `<figure class="tpeek tp-${esc(key)}" data-tpeek="${esc(key)}">
+          <p class="tp-b" aria-live="polite">${esc(sayOf(s))}</p>
+          <img src="${esc(taeoSrc(s))}" alt="${esc(s.alt || '태오')}" width="${s.w}" height="${s.h}">
+        </figure>`;
+  }
+
   /* ---------- 홈 ---------- */
   // 태오 말풍선: 열 때마다 하나씩 랜덤 (방금 나온 건 피함), 태오를 누르면 다음 말
   let lastBubble = -1;
+  // 밤에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오 (없으면 기본 감귤 태오)
+  function heroLook() {
+    const H = T.hero || {};
+    if (H.after && tripState().phase === 'after') return H.after;
+    const h = nowDate().getHours();
+    if (H.night && (h >= H.night.from || h < H.night.to)) return H.night;
+    return null;
+  }
   function pickBubble() {
+    const look = heroLook();
     const who = T.people.find((p) => p.name === savedName());
     // 고른 사람이 있으면 가끔 그 사람을 불러줌 (할머니 보고 싶어요!)
-    if (who && who.call && Math.random() < 0.5 && lastBubble !== -2) { lastBubble = -2; return `${who.call} 보고 싶어요!`; }
-    const list = (T.hero && (T.hero.bubbles || [T.hero.bubble])) || [''];
+    if (!look && who && who.call && Math.random() < 0.5 && lastBubble !== -2) { lastBubble = -2; return `${who.call} 보고 싶어요!`; }
+    const list = (look && look.bubbles) || (T.hero && (T.hero.bubbles || [T.hero.bubble])) || [''];
     if (list.length < 2) return list[0] || '';
     let i;
     do { i = Math.floor(Math.random() * list.length); } while (i === lastBubble);
@@ -181,6 +202,7 @@
 
   function heroHTML(st) {
     const H = T.hero || {};
+    const look = heroLook();
     let big;
     let small;
     if (st.phase === 'before') { big = `D-${st.dday}`; small = '출발까지'; }
@@ -190,7 +212,7 @@
     } else { big = '다녀왔어요'; small = '모두 수고했어요'; }
     const nights = dates.length - 1;
     return `<section class="invite" aria-label="여행 초대">
-      <p class="dday inv-dday"><span>${esc(small)}</span><b>${esc(big)}</b></p>
+      <p class="dday inv-dday${st.phase === 'after' ? ' long' : ''}"><span>${esc(small)}</span><b>${esc(big)}</b></p>
       <div class="inv-text">
         <p class="inv-eyebrow">${esc(H.eyebrow || T.eyebrow)}</p>
         <h1 class="inv-title">${esc(H.title || T.shortTitle)}</h1>
@@ -198,9 +220,9 @@
         <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
         ${T.share ? `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>` : ''}
       </div>
-      ${H.photo ? `<figure class="inv-photo">
+      ${H.photo ? `<figure class="inv-photo${look ? ' alt-look' : ''}">
         <p class="inv-bubble" data-bubble aria-live="polite">${esc(pickBubble())}</p>
-        <span class="inv-flip f0" data-flip><img src="${esc(H.photo)}" alt="${esc(H.alt || '')}" width="600" height="736" fetchpriority="high"></span>
+        <span class="inv-flip f0" data-flip><img src="${esc(look ? look.photo : H.photo)}" alt="${esc((look || H).alt || '')}" width="${look ? look.w : 600}" height="${look ? look.h : 736}" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
   }
@@ -612,6 +634,7 @@
     </li>`).join('');
 
     return `<section class="block">
+        ${peekHTML('plan')}
         <h1 class="page-title">일정</h1>
         <p class="lede">정해진 것과 아직 정할 것을 나눠 적었어요. 바뀌면 바로 고쳐둘게요.</p>
         <p class="legend"><span class="lg s-ok"><i></i>확정</span><span class="lg s-plan"><i></i>예정</span><span class="lg s-tbd"><i></i>미정 · 정하는 중</span></p>
@@ -636,6 +659,7 @@
       <div class="tags">${(x.tags || []).map((t) => `<span class="tag ${t.kind || ''}">${esc(t.text)}</span>`).join('')}</div>
     </li>`;
     return `<section class="block">
+        ${peekHTML('ideas')}
         <h1 class="page-title">가볼 곳 · 먹을 곳</h1>
         <p class="lede">${esc(T.ideasNote)}</p>
       </section>
@@ -688,6 +712,7 @@
 
     return `<section class="block">
         <a class="back-link" href="#info">← 정보</a>
+        ${peekHTML('pack')}
         <h1 class="page-title">준비물</h1>
         <p class="lede">체크 표시는 지금 보고 있는 휴대폰에만 저장돼요. 각자 폰에서 체크하면 돼요.</p>
       </section>
@@ -731,6 +756,14 @@
     if (e.target.closest('.inv-photo')) {
       const b = view.querySelector('[data-bubble]');
       if (b) { b.textContent = pickBubble(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+      return;
+    }
+    const tp = e.target.closest('[data-tpeek]');
+    if (tp) {
+      const s = T.taeo[tp.dataset.tpeek];
+      const b = tp.querySelector('.tp-b');
+      if (b && s) b.textContent = sayOf(s, b.textContent);
+      tp.classList.remove('tap'); void tp.offsetWidth; tp.classList.add('tap');
       return;
     }
     const chip = e.target.closest('[data-map-day]');
@@ -833,6 +866,7 @@
     </div>`;
 
     return `<section class="block">
+        ${peekHTML('info')}
         <h1 class="page-title">정보</h1>
         <p class="lede">항공편 · 숙소 · 렌터카 · 날씨 · 병원을 한곳에 모았어요.</p>
       </section>
@@ -1410,6 +1444,7 @@
     return `<section class="block" id="checks">
       <div class="card checks${done === list.length ? ' all-done' : ''}">
         <div class="ck-head"><b>${esc(title)}</b><span class="count${done === list.length ? ' full' : ''}">${done} / ${list.length}</span></div>
+        ${done === list.length && T.taeo && T.taeo.done ? `<p class="ck-yay"><img src="${esc(taeoSrc(T.taeo.done))}" alt="${esc(T.taeo.done.alt || '')}" width="${T.taeo.done.w}" height="${T.taeo.done.h}"><span>다 챙겼어요!<small>태오가 박수 쳐요</small></span></p>` : ''}
         <ul class="checklist">${sorted.slice(0, 3).map(row).join('')}</ul>
         ${more.length ? `<details class="more"><summary><span>${more.length}개 더 보기</span><span>접기</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><ul class="checklist">${more.map(row).join('')}</ul></details>` : ''}
       </div>
@@ -1449,6 +1484,7 @@
     const g = T.groups.find((x) => x.id === 'b');
     const stepList = (steps) => `<ol class="g-steps">${steps.map((s) => `<li><span class="gs-t">${esc(s.time || '')}</span><div><b>${esc(s.title)}</b>${s.note ? `<p>${esc(s.note)}</p>` : ''}</div></li>`).join('')}</ol>`;
     return `<section class="block">
+        ${peekHTML('guide')}
         <p class="page-kicker">${esc(whoText('b'))}</p>
         <h1 class="page-title">${esc(G.title)}</h1>
         <p class="lede">${esc(G.intro)}</p>
@@ -1667,6 +1703,7 @@
   }
   function renderAlbum() {
     return `<section class="block">
+        ${peekHTML('album')}
         <h1 class="page-title">가족 사진첩</h1>
         <p class="lede">여행 중에 찍은 사진을 같이 모아요. 올린 사진은 민석 구글 드라이브에 저장되고, 가족 비밀번호를 아는 사람만 볼 수 있어요.</p>
       </section>
@@ -1928,7 +1965,7 @@
     const p = me();
     wxSheet.innerHTML = `<div class="sheet-panel who-panel" tabindex="-1">
       <div class="sheet-grab" aria-hidden="true"></div>
-      <img class="who-mandarin" src="assets/icons/mandarin.webp" alt="" width="72" height="72">
+      ${T.taeo && T.taeo.who ? `<img class="who-taeo" src="${esc(taeoSrc(T.taeo.who))}" alt="" width="${T.taeo.who.w}" height="${T.taeo.who.h}">` : '<img class="who-mandarin" src="assets/icons/mandarin.webp" alt="" width="72" height="72">'}
       <h2 class="who-title">누구세요?</h2>
       <p class="who-sub">고르면 내 일정을 맨 위에 크게 보여드려요. 의견 · 투표 · 사진 올릴 때 이름도 자동으로 들어가요.</p>
       <div class="who-grid">${T.people.filter((x) => x.id !== 'taeo').map((x) => `<button type="button" class="who-btn${p && p.id === x.id ? ' on' : ''}" data-who="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>

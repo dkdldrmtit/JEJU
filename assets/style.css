@@ -932,7 +932,7 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 .checks { padding: 6px 16px 4px; background: linear-gradient(150deg, color-mix(in srgb, var(--tangerine) 14%, var(--surface)), var(--surface) 55%); }
 .ck-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 0 4px; }
 .ck-head b { font-size: var(--fs-base); }
-.checks.all-done .ck-head b::after { content: " · 다 챙겼어요!"; color: var(--sea-ink); }
+/* 다 챙기면 아래에 태오가 박수 (.ck-yay) */
 
 /* 바로가기 타일 */
 .quick { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1226,3 +1226,51 @@ body { background: var(--bg); }
 .qrow { padding: 14px 4px 12px; gap: 2px; }
 .qi { font-size: .78rem; }
 .who-mandarin { display: block; margin: 2px auto 6px; width: 72px; height: 72px; }
+
+/* =====================================================================
+   화면마다 인사하는 태오 스티커 (일정·후보·앨범·정보·준비물·후발대 안내)
+   ===================================================================== */
+.tpeek img, .who-taeo, .ck-yay img {
+  filter:
+    drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff)
+    drop-shadow(0 8px 14px rgb(23 48 52 / .16));
+}
+.tpeek {
+  float: right; position: relative; width: 96px; margin: 0 -2px 6px 12px; padding-top: 34px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.tpeek img { display: block; width: 100%; height: auto; transform-origin: 50% 100%; }
+.tp-guide { width: 104px; }
+.tp-album { width: 88px; }
+.tp-b {
+  position: absolute; top: 0; right: 4px; z-index: 1; margin: 0; transform: rotate(-4deg);
+  font-family: var(--font-display); font-size: .8rem; line-height: 1.2; color: #173034; white-space: nowrap;
+  background: #fff; padding: 6px 10px 5px; border-radius: 13px 13px 4px 13px;
+  box-shadow: 0 4px 12px rgb(23 48 52 / .12);
+}
+.tp-b::after { content: ""; position: absolute; right: 18px; bottom: -5px; width: 10px; height: 10px; background: #fff; transform: rotate(45deg); border-radius: 0 0 3px 0; }
+.view-in .tpeek img { animation: inv-up .6s var(--ease) .1s both, inv-sway 6s ease-in-out 1s infinite; }
+.view-in .tp-b { animation: tp-pop .45s var(--ease) .55s both; }
+.tpeek.tap img { animation: tp-wiggle .5s var(--ease); }
+.tpeek.tap .tp-b { animation: tp-pop .4s var(--ease); }
+@keyframes tp-pop { 0% { opacity: 0; transform: rotate(-4deg) scale(.4); } 70% { opacity: 1; transform: rotate(-7deg) scale(1.06); } 100% { transform: rotate(-4deg) scale(1); } }
+@keyframes tp-wiggle { 0%, 100% { transform: none; } 25% { transform: rotate(-8deg) translateY(-4px); } 60% { transform: rotate(6deg); } }
+/* 제목 아래 설명이 스티커를 감싸 흐르고, 다음 칸에서는 정리 */
+.tpeek ~ .lede:last-child, .tpeek ~ :last-child { margin-bottom: 0; }
+.block:has(> .tpeek)::after { content: ""; display: block; clear: both; }
+@media (max-width: 360px) { .tpeek { width: 82px; } .tp-guide { width: 90px; } .tp-album { width: 76px; } }
+
+/* 누구세요? 창의 태오 */
+.who-taeo { display: block; margin: 0 auto 8px; width: 92px; height: auto; }
+
+/* 다 챙기면 태오가 박수 */
+.ck-yay { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; padding: 10px 14px 10px 10px; border-radius: 16px; background: color-mix(in srgb, var(--sea) 10%, #fff); }
+.ck-yay img { width: 84px; height: auto; flex: none; }
+.ck-yay span { display: grid; gap: 2px; font-weight: 800; color: var(--sea-ink); }
+.ck-yay small { font-weight: 600; color: var(--muted); font-size: var(--fs-xs); }
+.view-in .ck-yay img { animation: tp-wiggle .7s var(--ease) .4s both; }
+
+html.calm .tpeek img, html.calm .tp-b, html.calm .ck-yay img { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .tpeek img, .tp-b, .ck-yay img { animation: none !important; } }
+/* 좁은 화면에서 '다녀왔어요'처럼 긴 배지는 작은 글씨를 숨겨 겹치지 않게 */
+@media (max-width: 360px) { .inv-dday.long span { display: none; } }
