@@ -38,67 +38,7 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121615;
-    --surface: #1A201E;
-    --sunken: #232A28;
-    --ink: #E7ECE9;
-    --muted: #9CA8A3;
-    --line: #2E3633;
-    --basalt: #1F2624;
-    --basalt-ink: #EEF1EE;
-    --basalt-muted: #A5B0AB;
-    --basalt-dot: rgb(255 255 255 / .05);
-    --tangerine: #F39A4B;
-    --tangerine-ink: #F7B071;
-    --tangerine-soft: #3A2816;
-    --on-tangerine: #121615;
-    --sea: #4FC0B4;
-    --sea-ink: #82D8CE;
-    --sea-soft: #15312D;
-    --island: #25302C;
-    --island-edge: #3A4843;
-    --shadow: none;
-    --d1: #4FC0B4;
-    --d2: #F39A4B;
-    --d3: #72A9EA;
-    --d4: #BB8EDD;
-    --d5: #EC7F97;
-    --d6: #A9BB6E;
-    color-scheme: dark;
-  }
-}
 
-:root[data-theme="dark"] {
-  --bg: #121615;
-  --surface: #1A201E;
-  --sunken: #232A28;
-  --ink: #E7ECE9;
-  --muted: #9CA8A3;
-  --line: #2E3633;
-  --basalt: #1F2624;
-  --basalt-ink: #EEF1EE;
-  --basalt-muted: #A5B0AB;
-  --basalt-dot: rgb(255 255 255 / .05);
-  --tangerine: #F39A4B;
-  --tangerine-ink: #F7B071;
-  --tangerine-soft: #3A2816;
-  --on-tangerine: #121615;
-  --sea: #4FC0B4;
-  --sea-ink: #82D8CE;
-  --sea-soft: #15312D;
-  --island: #25302C;
-  --island-edge: #3A4843;
-  --shadow: none;
-  --d1: #4FC0B4;
-  --d2: #F39A4B;
-  --d3: #72A9EA;
-  --d4: #BB8EDD;
-  --d5: #EC7F97;
-  --d6: #A9BB6E;
-  color-scheme: dark;
-}
 
 /* ---------- 기본 ---------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -301,18 +241,6 @@ a { color: var(--sea-ink); }
 .pl-legend .tbd i { display: none; }
 @media (max-width: 360px) { .pb { font-size: .625rem; } .pb svg { width: 12px; height: 12px; } .pb small { display: none; } }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .k-fly { --kb: #1E3A5F; --kf: #B5D4FA; }
-  :root:not([data-theme="light"]) .k-move { --kb: #342A5A; --kf: #D3C6FA; }
-  :root:not([data-theme="light"]) .k-meal { --kb: #4A2A18; --kf: #FFBE98; }
-  :root:not([data-theme="light"]) .k-play { --kb: #15402B; --kf: #9BE3BB; }
-  :root:not([data-theme="light"]) .k-rest { --kb: #44391A; --kf: #F2DB8A; }
-}
-:root[data-theme="dark"] .k-fly { --kb: #1E3A5F; --kf: #B5D4FA; }
-:root[data-theme="dark"] .k-move { --kb: #342A5A; --kf: #D3C6FA; }
-:root[data-theme="dark"] .k-meal { --kb: #4A2A18; --kf: #FFBE98; }
-:root[data-theme="dark"] .k-play { --kb: #15402B; --kf: #9BE3BB; }
-:root[data-theme="dark"] .k-rest { --kb: #44391A; --kf: #F2DB8A; }
 
 /* ---------- 예약 요약 ---------- */
 .booking { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -708,10 +636,6 @@ textarea.fb-input { resize: vertical; min-height: 76px; }
   --glass: rgb(255 255 255 / .78);
   --wx-cloud: #E4E9EC; --wx-cloud-line: #8E999E; --wx-sun: #E8871E; --wx-sun-fill: #FFD27A; --wx-rain: #3A83C5;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --glass: rgb(26 32 30 / .78); --wx-cloud: #3B4548; --wx-cloud-line: #A3AFB3; --wx-sun-fill: #F5B94B; --wx-rain: #7DB6EA; }
-}
-:root[data-theme="dark"] { --glass: rgb(26 32 30 / .78); --wx-cloud: #3B4548; --wx-cloud-line: #A3AFB3; --wx-sun-fill: #F5B94B; --wx-rain: #7DB6EA; }
 
 /* 글자: 한 단계씩 정리, 한국어 자간 살짝 좁게 */
 body { font-size: 15.5px; letter-spacing: -.01em; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
@@ -854,10 +778,6 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
   --inv-dday: #E26B12;
   --inv-bubble: #FFFFFF;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --inv-bg: linear-gradient(165deg, #173038 0%, #1B2B29 55%, #33261C 100%); --inv-ink: #EEF4F2; --inv-muted: #A7BDBA; --inv-dday: #F7A45A; --inv-bubble: #FFFFFF; }
-}
-:root[data-theme="dark"] { --inv-bg: linear-gradient(165deg, #173038 0%, #1B2B29 55%, #33261C 100%); --inv-ink: #EEF4F2; --inv-muted: #A7BDBA; --inv-dday: #F7A45A; --inv-bubble: #FFFFFF; }
 
 .invite {
   position: relative; overflow: hidden;
@@ -1162,3 +1082,67 @@ button.day-wx .wx-chip::after { content: "›"; margin-left: 2px; color: var(--m
 /* 탭바에 없는 페이지에서 돌아가기 */
 .back-link { display: inline-block; margin-bottom: 6px; font-size: var(--fs-sm); font-weight: 700; color: var(--sea-ink); text-decoration: none; }
 a.map-teaser { text-decoration: none; }
+
+/* =====================================================================
+   어르신도 편하게 — 누구세요 · 내 일정 · 큰 글씨
+   ===================================================================== */
+/* 큰 글씨: 화면 전체를 18% 키움 (글자 · 단추 · 간격 모두) */
+html.big body { zoom: 1.18; }
+html.big .muted, html.big .note, html.big .sub { color: var(--ink); }
+/* 차분하게: 날아다니는 효과 끄기 */
+html.calm .flyer, html.calm .pl-sky { display: none !important; }
+html.calm .view-in > *, html.calm .inv-photo img, html.calm .inv-bubble, html.calm .fly-body, html.calm .kakao-share { animation: none !important; }
+
+.me-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0 10px;
+  font-size: var(--fs-sm); color: var(--muted);
+}
+.me-bar > span { flex: 1; min-width: 0; }
+.me-bar b { color: var(--ink); }
+.me-btn {
+  appearance: none; font: inherit; cursor: pointer; border: 0; border-radius: 999px;
+  padding: 7px 12px; min-height: 36px; font-size: var(--fs-sm); font-weight: 700;
+  background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+.me-btn.on { background: var(--ink); color: var(--bg); box-shadow: none; }
+.me-btn.primary { background: var(--tangerine); color: #fff; box-shadow: none; }
+
+.my-card { padding: 18px; border: 2px solid var(--tangerine); background: linear-gradient(160deg, var(--tangerine-soft), var(--surface) 60%); }
+.my-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.my-top h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; }
+.my-badge { flex: none; padding: 5px 10px; border-radius: 999px; background: var(--tangerine); color: #fff; font-weight: 800; font-size: var(--fs-sm); }
+.my-next { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.my-when { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 1.05rem; font-weight: 800; color: var(--tangerine-ink); }
+.my-when em { font-style: normal; font-size: var(--fs-sm); color: var(--sea-ink); }
+.my-what { margin-top: 4px; font-size: 1.2rem; font-weight: 700; line-height: 1.4; color: var(--ink); }
+.my-note { margin-top: 6px; font-size: 1rem; line-height: 1.55; color: var(--ink); }
+.my-next .go-btn { margin-top: 12px; }
+.my-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.my-list li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--surface); }
+.my-list span { font-size: var(--fs-sm); font-weight: 700; color: var(--muted); }
+.my-list b { font-size: 1.02rem; }
+.my-actions { display: grid; gap: 8px; margin-top: 14px; }
+.my-go {
+  appearance: none; font: inherit; cursor: pointer; display: block; text-align: center; text-decoration: none;
+  padding: 13px 14px; border-radius: 14px; border: 0; background: var(--ink); color: var(--bg); font-weight: 800; font-size: 1rem;
+}
+.my-go.ghost { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+
+.who-title { font-family: var(--font-display); font-weight: 400; font-size: 1.8rem; text-align: center; }
+.who-sub { margin-top: 6px; text-align: center; font-size: var(--fs-base); color: var(--muted); }
+.who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.who-btn {
+  appearance: none; font: inherit; cursor: pointer; border: 0; border-radius: 16px; min-height: 64px;
+  font-size: 1.3rem; font-weight: 800; color: var(--ink); background: var(--sunken);
+}
+.who-btn.on, .who-btn:active { background: var(--tangerine); color: #fff; }
+.who-skip { appearance: none; font: inherit; cursor: pointer; display: block; width: 100%; margin-top: 14px; padding: 12px; border: 0; background: none; color: var(--muted); font-weight: 700; font-size: var(--fs-base); }
+
+.ma-day { margin: 18px 0 8px; font-size: 1.05rem; }
+.ma-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ma-list li { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--sunken); }
+.ma-list span { font-weight: 800; font-size: var(--fs-sm); color: var(--tangerine-ink); }
+.ma-list b { font-size: 1rem; }
+.ma-list p { margin-top: 2px; font-size: var(--fs-sm); color: var(--muted); line-height: 1.5; }
+/* 지도는 확대하면 눌러서 움직이는 위치가 어긋날 수 있어서 원래 크기로 */
+html.big .lmap-wrap { zoom: calc(1 / 1.18); }

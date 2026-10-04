@@ -168,6 +168,9 @@
   // 태오 말풍선: 열 때마다 하나씩 랜덤 (방금 나온 건 피함), 태오를 누르면 다음 말
   let lastBubble = -1;
   function pickBubble() {
+    const who = T.people.find((p) => p.name === savedName());
+    // 고른 사람이 있으면 가끔 그 사람을 불러줌 (할머니 보고 싶어요!)
+    if (who && who.call && Math.random() < 0.5 && lastBubble !== -2) { lastBubble = -2; return `${who.call} 보고 싶어요!`; }
     const list = (T.hero && (T.hero.bubbles || [T.hero.bubble])) || [''];
     if (list.length < 2) return list[0] || '';
     let i;
@@ -361,11 +364,7 @@
   const legOf = (a, b) => ROUTES[`${a}>${b}`];
   const dayColor = (i) => getComputedStyle(document.documentElement).getPropertyValue(`--d${i + 1}`).trim() || '#0E7A73';
   const roundMin = (m) => Math.max(5, Math.ceil(m / 5) * 5);
-  const isDark = () => {
-    const t = document.documentElement.dataset.theme;
-    if (t) return t === 'dark';
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  };
+  const isDark = () => false; // 다크모드는 쓰지 않아요 (늘 밝은 화면)
 
   function stepsHTML(key) {
     const sel = mapSel[key];
@@ -601,7 +600,7 @@
 
   function renderHome() {
     const st = tripState();
-    return heroHTML(st) + nowHTML(st) + checkHTML(st) + quickHTML(st) + plannerHTML(st) + homeVoiceHTML() + (st.phase === 'before' ? '' : homeAlbumHTML()) + homeMapHTML() + updatesHTML() + bookingsHTML() + todoHTML();
+    return meBarHTML() + heroHTML(st) + (me() ? myCardHTML(st) : nowHTML(st)) + checkHTML(st) + quickHTML(st) + plannerHTML(st) + homeVoiceHTML() + (st.phase === 'before' ? '' : homeAlbumHTML()) + homeMapHTML() + updatesHTML() + bookingsHTML() + todoHTML();
   }
 
   /* ---------- 일정 ---------- */
@@ -1118,7 +1117,7 @@
 
   /* ---------- 움직임: 등장 · 상단 바 · 토스트 · D-day ---------- */
   // 휴대폰의 '동작 줄이기' 설정과 상관없이 효과를 보여줌 (가족 요청)
-  const reduceMotion = false;
+  let reduceMotion = false;
   const topbar = document.createElement('div');
   topbar.className = 'topbar';
   topbar.setAttribute('aria-hidden', 'true');
@@ -1393,7 +1392,8 @@
   let remindState = (() => { try { return JSON.parse(localStorage.getItem(REMIND_KEY)) || {}; } catch (e) { return {}; } })();
   function checkHTML(st) {
     const t = today();
-    const list = (T.reminders || []).filter((r) => toDate(r.from) <= t && t <= toDate(r.to));
+    const p = me();
+    const list = (T.reminders || []).filter((r) => toDate(r.from) <= t && t <= toDate(r.to) && (!p || !r.who || (Array.isArray(r.who) ? r.who.includes(p.id) : r.who === p.group)));
     if (!list.length) return '';
     const done = list.filter((r) => remindState[r.id]).length;
     const title = st.phase === 'before' ? `출발 D-${st.dday} · 이것만 챙겨요` : '오늘 챙길 것';
@@ -1808,6 +1808,155 @@
     if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openWxSheet(el.dataset.wxOpen); }
   });
 
+  /* =====================================================================
+     누구세요? · 내 일정 · 큰 글씨 — 어르신도 편하게
+     ===================================================================== */
+  const BIG_KEY = 'jeju2026.big';
+  const ASKED_KEY = 'jeju2026.whoAsked';
+  const store = {
+    get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* 무시 */ } },
+  };
+  const me = () => T.people.find((p) => p.name === savedName() && p.id !== 'taeo') || null;
+  const isBig = () => { const v = store.get(BIG_KEY); if (v === '1') return true; if (v === '0') return false; const p = me(); return Boolean(p && p.big); };
+  function applyBig() {
+    const big = isBig();
+    document.documentElement.classList.toggle('big', big);
+    // 큰 글씨일 땐 날아다니는 효과를 꺼서 화면을 차분하게
+    document.documentElement.classList.toggle('calm', big);
+    reduceMotion = big;
+  }
+  applyBig();
+
+  // 어르신이 읽기 쉬운 시각: 21:40 → 밤 9:40, 12:00 → 낮 12시
+  function friendlyTime(t) {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    const part = h < 6 ? '새벽' : h < 12 ? '오전' : h < 13 ? '낮' : h < 18 ? '오후' : h < 21 ? '저녁' : '밤';
+    const hh = h > 12 ? h - 12 : h;
+    return `${part} ${hh}${m ? `:${String(m).padStart(2, '0')}` : '시'}`;
+  }
+  const presentOn = (p, iso) => { const g = T.groups.find((x) => x.id === p.group); return !g || (g.arrive.date <= iso && iso <= g.depart.date); };
+  function forMe(p, it, iso) {
+    if (!presentOn(p, iso)) return false;
+    if (!it.who || it.who === 'all') return true;
+    if (Array.isArray(it.who)) return it.who.includes(p.id);
+    return it.who === p.group;
+  }
+  function myItems(p) {
+    const out = [];
+    T.days.forEach((d) => (d.items || []).forEach((it) => { if (forMe(p, it, d.date)) out.push({ ...it, date: d.date }); }));
+    return out;
+  }
+
+  function meBarHTML() {
+    const p = me();
+    const big = isBig();
+    if (!p) {
+      return `<div class="me-bar"><span>누구세요? 고르면 <b>내 일정</b>만 크게 보여요</span><button type="button" class="me-btn primary" data-who-open>고르기</button></div>`;
+    }
+    return `<div class="me-bar"><span><b>${esc(p.name)}</b>${p.name.length > 2 ? '' : '님'} 화면이에요</span>
+      <button type="button" class="me-btn${big ? ' on' : ''}" data-big aria-pressed="${big}">${big ? '큰 글씨 켜짐' : '큰 글씨'}</button>
+      <button type="button" class="me-btn" data-who-open>사람 바꾸기</button></div>`;
+  }
+
+  function myCardHTML(st) {
+    const p = me();
+    if (!p) return '';
+    const items = myItems(p).filter((it) => it.time);
+    const now = nowDate();
+    const nowIso = isoOf(now);
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const upcoming = items.filter((it) => it.date > nowIso || (it.date === nowIso && mins(it.time) >= cur - 15));
+    const g = T.groups.find((x) => x.id === p.group);
+    const start = g ? g.arrive.date : T.start;
+    const left = dayDiff(today(), toDate(start));
+    const badge = left > 0 ? `제주까지 ${left}일` : st.phase === 'during' ? `여행 ${st.index + 1}일째` : '';
+    const next = upcoming[0];
+    const rest = upcoming.slice(1, 3);
+    const when = (it) => `${it.date === nowIso ? '오늘' : `${dom(it.date)}일(${wd(it.date)})`} ${friendlyTime(it.time)}`;
+    const leftMin = next && next.date === nowIso ? mins(next.time) - cur : null;
+    const day = T.days.find((d) => d.date === (next && next.date));
+    // 길찾기 목적지: '출발' 일정이면 그 다음 정거장, 아니면 그 시각의 정거장
+    const rt = (day && day.route) || [];
+    const si = next ? rt.findIndex((r) => r.time === next.time) : -1;
+    const stop = si < 0 ? null : (/출발/.test(next.title) && rt[si + 1] ? rt[si + 1] : rt[si]);
+    return `<section class="block my-block">
+      <div class="card my-card">
+        <div class="my-top"><h2>${esc(p.name)} 일정</h2>${badge ? `<span class="my-badge">${esc(badge)}</span>` : ''}</div>
+        ${next ? `<div class="my-next">
+            <p class="my-when">${esc(when(next))}${leftMin != null && leftMin >= 0 ? `<em>${leftText(leftMin)}</em>` : ''}</p>
+            <p class="my-what">${esc(next.title)}</p>
+            ${next.note ? `<p class="my-note">${esc(next.note)}</p>` : ''}
+            ${stop ? routeLink(stop.at, `${T.map.places[stop.at].name} 길찾기`) : ''}
+          </div>
+          ${rest.length ? `<ol class="my-list">${rest.map((it) => `<li><span>${esc(when(it))}</span><b>${esc(it.title)}</b></li>`).join('')}</ol>` : ''}`
+        : '<p class="my-what">일정이 다 끝났어요. 조심히 들어가세요!</p>'}
+        <div class="my-actions">
+          ${p.group === 'b' && T.guideB ? '<a class="my-go" href="#guide">도착 · 출발 안내 크게 보기</a>' : ''}
+          <button type="button" class="my-go ghost" data-my-all>내 일정 전부 보기</button>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  // 내 일정 전부: 아래에서 올라오는 창 (날씨 창과 같은 모양)
+  function openMyAll() {
+    const p = me();
+    if (!p) return;
+    const byDay = new Map();
+    myItems(p).forEach((it) => { if (!byDay.has(it.date)) byDay.set(it.date, []); byDay.get(it.date).push(it); });
+    wxSheet.innerHTML = `<div class="sheet-panel my-all" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="ws-head"><div><p class="ws-day">${esc(p.name)}</p><p class="ws-main"><b>내 일정 전부</b></p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
+      ${[...byDay.entries()].map(([d, arr]) => `<h3 class="ma-day">${esc(mdw(d))}</h3><ol class="ma-list">${arr.map((it) => `<li><span>${esc(it.time ? friendlyTime(it.time) : (it.when || ''))}</span><div><b>${esc(it.title)}</b>${it.note ? `<p>${esc(it.note)}</p>` : ''}</div></li>`).join('')}</ol>`).join('')}
+    </div>`;
+    wxSheet.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+  }
+
+  // 누구세요? 고르는 창
+  function openWho() {
+    const p = me();
+    wxSheet.innerHTML = `<div class="sheet-panel who-panel" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <h2 class="who-title">누구세요?</h2>
+      <p class="who-sub">고르면 내 일정을 맨 위에 크게 보여드려요. 의견 · 투표 · 사진 올릴 때 이름도 자동으로 들어가요.</p>
+      <div class="who-grid">${T.people.filter((x) => x.id !== 'taeo').map((x) => `<button type="button" class="who-btn${p && p.id === x.id ? ' on' : ''}" data-who="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
+      <button type="button" class="who-skip" data-sheet-close>그냥 둘러볼게요</button>
+    </div>`;
+    wxSheet.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+  }
+  wxSheet.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-who]');
+    if (!b) return;
+    saveName(b.dataset.who);
+    store.set(ASKED_KEY, '1');
+    try { localStorage.removeItem(BIG_KEY); } catch (err) { /* 무시 */ } // 사람에 맞는 기본값으로
+    applyBig();
+    closeWxSheet();
+    render();
+    window.scrollTo(0, 0);
+  });
+  view.addEventListener('click', (e) => {
+    if (e.target.closest('[data-who-open]')) { openWho(); return; }
+    if (e.target.closest('[data-my-all]')) { openMyAll(); return; }
+    if (e.target.closest('[data-big]')) {
+      store.set(BIG_KEY, isBig() ? '0' : '1');
+      applyBig();
+      render();
+    }
+  });
+  // 처음 들어오면 한 번만 물어봄
+  function askWhoOnce() {
+    if (currentTab() !== 'home' || me() || store.get(ASKED_KEY)) return;
+    store.set(ASKED_KEY, '1');
+    setTimeout(openWho, 700);
+  }
+
   /* ---------- 탭 전환 ---------- */
   const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo, album: renderAlbum, guide: renderGuide };
   const currentTab = () => {
@@ -1833,6 +1982,7 @@
     animateIn();
     if (view.querySelector('[data-share]')) loadKakaoShare();
     requestAnimationFrame(() => { buildSky(); onScroll(); });
+    askWhoOnce();
   }
 
   window.addEventListener('hashchange', () => {
