@@ -1236,12 +1236,12 @@ body { background: var(--bg); }
     drop-shadow(0 8px 14px rgb(23 48 52 / .16));
 }
 .tpeek {
-  float: right; position: relative; width: 96px; margin: 0 -2px 6px 12px; padding-top: 34px;
+  float: right; position: relative; width: 118px; margin: 0 -2px 6px 12px; padding-top: 34px;
   cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none;
 }
 .tpeek img { display: block; width: 100%; height: auto; transform-origin: 50% 100%; }
-.tp-guide { width: 104px; }
-.tp-album { width: 88px; }
+.tp-guide { width: 128px; }
+.tp-album { width: 106px; }
 .tp-b {
   position: absolute; top: 0; right: 4px; z-index: 1; margin: 0; transform: rotate(-4deg);
   font-family: var(--font-display); font-size: .8rem; line-height: 1.2; color: #173034; white-space: nowrap;
@@ -1258,14 +1258,14 @@ body { background: var(--bg); }
 /* 제목 아래 설명이 스티커를 감싸 흐르고, 다음 칸에서는 정리 */
 .tpeek ~ .lede:last-child, .tpeek ~ :last-child { margin-bottom: 0; }
 .block:has(> .tpeek)::after { content: ""; display: block; clear: both; }
-@media (max-width: 360px) { .tpeek { width: 82px; } .tp-guide { width: 90px; } .tp-album { width: 76px; } }
+@media (max-width: 360px) { .tpeek { width: 100px; } .tp-guide { width: 110px; } .tp-album { width: 90px; } }
 
 /* 누구세요? 창의 태오 */
-.who-taeo { display: block; margin: 0 auto 8px; width: 92px; height: auto; }
+.who-taeo { display: block; margin: 0 auto 8px; width: 116px; height: auto; }
 
 /* 다 챙기면 태오가 박수 */
 .ck-yay { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; padding: 10px 14px 10px 10px; border-radius: 16px; background: color-mix(in srgb, var(--sea) 10%, #fff); }
-.ck-yay img { width: 84px; height: auto; flex: none; }
+.ck-yay img { width: 108px; height: auto; flex: none; }
 .ck-yay span { display: grid; gap: 2px; font-weight: 800; color: var(--sea-ink); }
 .ck-yay small { font-weight: 600; color: var(--muted); font-size: var(--fs-xs); }
 .view-in .ck-yay img { animation: tp-wiggle .7s var(--ease) .4s both; }
