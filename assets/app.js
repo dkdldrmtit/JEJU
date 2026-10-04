@@ -1426,20 +1426,20 @@
   });
 
   /* 홈 바로가기: 후발대 안내 · 저녁 투표 · 사진첩 */
-  // 바로가기: 아이콘 + 짧은 이름만 한 줄로 (토스 메뉴처럼)
+  // 바로가기: 3D 아이콘 + 짧은 이름만 한 줄로 (토스 메뉴처럼)
+  const IC3 = (n) => `<img src="assets/icons/${n}.webp" alt="" width="48" height="48" loading="lazy">`;
   function quickHTML(st) {
     const t = today();
-    const SVG = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
     const tiles = [];
     const G = T.guideB;
     const p = me();
-    if (G && t <= toDate(G.until || T.end) && (!p || p.group === 'b')) tiles.push(['#guide', '', ICON.plane, '도착 안내', 'c1']);
+    if (G && t <= toDate(G.until || T.end) && (!p || p.group === 'b')) tiles.push(['#guide', '', 'plane', '도착 안내']);
     const openPolls = (T.polls || []).filter((x) => t <= toDate(x.closes));
-    if (openPolls.length) tiles.push(['#ideas', 'polls', ICON.meal, '가족 투표', 'c2']);
-    tiles.push(['#pack', '', SVG('<rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/>'), '준비물', 'c3']);
-    tiles.push(['#plan', 'map-plan', ICON.route, '이동 지도', 'c4']);
-    if (tiles.length < 4) tiles.push(['#album', '', SVG('<rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 8"/>'), '사진첩', 'c5']);
-    return `<section class="block"><nav class="qrow" aria-label="바로가기">${tiles.map(([href, go, ic, label, c]) => `<a class="qi ${c}" href="${href}"${go ? ` data-goto="${go}"` : ''}><span class="qi-ic">${ic}</span><span>${esc(label)}</span></a>`).join('')}</nav></section>`;
+    if (openPolls.length) tiles.push(['#ideas', 'polls', 'heart', '가족 투표']);
+    tiles.push(['#pack', '', 'suitcase', '준비물']);
+    tiles.push(['#plan', 'map-plan', 'map', '이동 지도']);
+    tiles.push(['#album', '', 'camera', '사진첩']);
+    return `<section class="block"><nav class="qrow" aria-label="바로가기">${tiles.map(([href, go, ic, label]) => `<a class="qi" href="${href}"${go ? ` data-goto="${go}"` : ''}><span class="qi-ic">${IC3(ic)}</span><span>${esc(label)}</span></a>`).join('')}</nav></section>`;
   }
 
   /* 7. 후발대 안내 (할아버지 · 할머니 · 선미 · 범준) */
@@ -1928,6 +1928,7 @@
     const p = me();
     wxSheet.innerHTML = `<div class="sheet-panel who-panel" tabindex="-1">
       <div class="sheet-grab" aria-hidden="true"></div>
+      <img class="who-mandarin" src="assets/icons/mandarin.webp" alt="" width="72" height="72">
       <h2 class="who-title">누구세요?</h2>
       <p class="who-sub">고르면 내 일정을 맨 위에 크게 보여드려요. 의견 · 투표 · 사진 올릴 때 이름도 자동으로 들어가요.</p>
       <div class="who-grid">${T.people.filter((x) => x.id !== 'taeo').map((x) => `<button type="button" class="who-btn${p && p.id === x.id ? ' on' : ''}" data-who="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
