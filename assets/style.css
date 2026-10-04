@@ -1146,3 +1146,66 @@ html.calm .view-in > *, html.calm .inv-photo img, html.calm .inv-bubble, html.ca
 .ma-list p { margin-top: 2px; font-size: var(--fs-sm); color: var(--muted); line-height: 1.5; }
 /* 지도는 확대하면 눌러서 움직이는 위치가 어긋날 수 있어서 원래 크기로 */
 html.big .lmap-wrap { zoom: calc(1 / 1.18); }
+
+/* =====================================================================
+   토스처럼 간결하게 — 연회색 바탕 · 테두리 없는 흰 카드 · 굵은 제목
+   ===================================================================== */
+:root { --bg: #F2F4F6; --surface: #FFFFFF; --sunken: #F2F4F6; --line: #E5E8EB; --ink: #191F28; --muted: #6B7684; --shadow: none; --r-lg: 22px; }
+body { background: var(--bg); }
+.card { border: 0; box-shadow: none; border-radius: 22px; padding: 20px; }
+.block { margin-top: 14px; }
+.block > .h, .block > .h-row { margin: 22px 4px 10px; }
+.block:first-child > .h { margin-top: 4px; }
+.h { font-family: var(--font-body); font-weight: 700; font-size: 1.25rem; letter-spacing: -.02em; }
+.h-row .h { margin: 0; }
+.count.link { font-weight: 600; color: var(--muted); }
+
+/* 맨 위: 이름 + 큰 글씨 */
+.me-bar { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 10px; }
+.me-name { appearance: none; font: inherit; border: 0; background: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 6px 2px; font-size: 1.05rem; color: var(--muted); }
+.me-name b { color: var(--ink); font-weight: 800; }
+.me-name svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.me-big { appearance: none; font: inherit; cursor: pointer; border: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--surface); color: var(--ink); font-weight: 800; font-size: 1.05rem; display: grid; place-items: center; position: relative; }
+.me-big small { position: absolute; right: 6px; top: 5px; font-size: .7rem; font-weight: 800; }
+.me-big.on { background: var(--ink); color: #fff; }
+
+/* 내 일정 카드: 테두리 대신 흰 카드 + 주황 포인트 */
+.my-card { border: 0; background: var(--surface); }
+.my-top h2 { font-family: var(--font-body); font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; }
+.my-badge { background: var(--tangerine-soft); color: var(--tangerine-ink); }
+.my-next { box-shadow: none; background: var(--sunken); }
+.my-list li { background: var(--sunken); }
+.my-go.ghost { box-shadow: none; background: var(--sunken); }
+
+/* 바로가기 아이콘 줄 */
+.qrow { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; padding: 14px 6px; background: var(--surface); border-radius: 22px; }
+.qi { display: grid; justify-items: center; gap: 6px; padding: 4px 0; text-decoration: none; color: var(--ink); font-size: .82rem; font-weight: 600; letter-spacing: -.02em; }
+.qi-ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 16px; }
+.qi-ic svg { width: 22px; height: 22px; }
+.qi.c1 .qi-ic { background: #E8F3FF; color: #3182F6; }
+.qi.c2 .qi-ic { background: #FFF0E6; color: #E86A12; }
+.qi.c3 .qi-ic { background: #E9F8EF; color: #12A150; }
+.qi.c4 .qi-ic { background: #F1ECFF; color: #7A4DE0; }
+.qi.c5 .qi-ic { background: #FFEEF2; color: #E0466B; }
+.qi:active .qi-ic { transform: scale(.92); }
+
+/* 챙길 것 */
+.checks { background: var(--surface); padding: 6px 20px 8px; }
+.ck-head b { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; }
+.checks .more { border-top: 0; }
+
+/* 의견함 */
+.voice { background: var(--surface); }
+.voice-lead { font-size: var(--fs-sm); }
+.fb-row, .fb-item { background: var(--sunken); }
+
+/* 정보 탭: 접힌 할 일 */
+.more-card { padding: 0; }
+.more-card > summary { list-style: none; cursor: pointer; padding: 16px 20px; font-weight: 700; color: var(--ink); }
+.more-card > summary::-webkit-details-marker { display: none; }
+.more-card > summary::after { content: " ›"; color: var(--muted); }
+.more-card[open] > summary { border-bottom: 1px solid var(--line); }
+.more-card .todo { padding: 4px 20px 12px; }
+
+/* 탭바 · 상단 바도 같은 톤 */
+.tabbar { border-top: 1px solid var(--line); }

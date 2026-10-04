@@ -351,8 +351,8 @@
       ${t.done ? '<span class="pill done">완료</span>' : ''}
     </li>`).join('');
     return `<section class="block">
-      <div class="h-row"><h2 class="h">준비 현황</h2><span class="count">${done} / ${T.todo.length}</span></div>
-      <div class="card"><ul class="todo">${rows}</ul></div>
+      <div class="h-row"><h2 class="h">민석 할 일</h2><span class="count">${done} / ${T.todo.length}</span></div>
+      <details class="card more-card"><summary>${T.todo.length - done}개 남았어요 · 눌러서 보기</summary><ul class="todo">${rows}</ul></details>
     </section>`;
   }
 
@@ -564,7 +564,7 @@
     return `<section class="block">
       <div class="h-row"><h2 class="h">가족 의견함</h2><a class="count link" href="#ideas">전체 보기</a></div>
       <div class="card voice">
-        <p class="voice-lead">하고 싶은 것, 궁금한 것, 바꾸고 싶은 것 뭐든 남겨주세요. <b>AI가 한 시간 안에 확인하고 답하거나 사이트에 반영해요.</b></p>
+        <p class="voice-lead">뭐든 남기면 <b>AI가 한 시간 안에</b> 답하거나 일정에 넣어요.</p>
         <div class="fb" data-fb-day="home"></div>
       </div>
     </section>`;
@@ -600,7 +600,8 @@
 
   function renderHome() {
     const st = tripState();
-    return meBarHTML() + heroHTML(st) + (me() ? myCardHTML(st) : nowHTML(st)) + checkHTML(st) + quickHTML(st) + plannerHTML(st) + homeVoiceHTML() + (st.phase === 'before' ? '' : homeAlbumHTML()) + homeMapHTML() + updatesHTML() + bookingsHTML() + todoHTML();
+    // 홈은 꼭 필요한 것만: 초대장 · 내 일정 · 바로가기 · 챙길 것 · 시간표 · 의견함 (나머지는 정보 탭으로)
+    return meBarHTML() + heroHTML(st) + (me() ? myCardHTML(st) : nowHTML(st)) + quickHTML(st) + checkHTML(st) + plannerHTML(st) + homeVoiceHTML();
   }
 
   /* ---------- 일정 ---------- */
@@ -846,6 +847,9 @@
       <section class="block"><h2 class="h">날씨</h2>${weatherHTML}</section>
       <section class="block"><h2 class="h">비상 연락</h2>${emergencyHTML}</section>
       ${babyInfoHTML()}
+      ${bookingsHTML()}
+      ${todoHTML()}
+      ${updatesHTML()}
       <section class="block"><h2 class="h">이 사이트는요</h2>
         <div class="card info-card"><ul class="bullets">${T.about.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></div>
         ${Object.keys(T.photos || {}).length ? `<p class="src">사진 출처 · ${Object.values(T.photos).map((ph) => esc(`${ph.alt} — ${ph.credit}`)).join(' / ')}</p>` : ''}
@@ -988,7 +992,7 @@
   }
 
   function fbBlockHTML(day) {
-    const list = (fbItems || []).filter((it) => day === 'all' || day === 'home' || it.day === day).slice(0, day === 'home' ? 3 : 999);
+    const list = (fbItems || []).filter((it) => day === 'all' || day === 'home' || it.day === day).slice(0, day === 'home' ? 2 : 999);
     const items = fbItems === null && FB.endpoint
       ? '<p class="fb-empty loading">의견 불러오는 중…</p>'
       : list.length
@@ -1396,14 +1400,19 @@
     const list = (T.reminders || []).filter((r) => toDate(r.from) <= t && t <= toDate(r.to) && (!p || !r.who || (Array.isArray(r.who) ? r.who.includes(p.id) : r.who === p.group)));
     if (!list.length) return '';
     const done = list.filter((r) => remindState[r.id]).length;
-    const title = st.phase === 'before' ? `출발 D-${st.dday} · 이것만 챙겨요` : '오늘 챙길 것';
+    const title = st.phase === 'before' ? '출발 전에 챙겨요' : '오늘 챙길 것';
+    // 안 한 것 먼저, 3개만 보이고 나머지는 접어둠
+    const sorted = list.filter((r) => !remindState[r.id]).concat(list.filter((r) => remindState[r.id]));
+    const row = (r) => `<li><label for="rm-${esc(r.id)}">
+          <input type="checkbox" id="rm-${esc(r.id)}" data-remind="${esc(r.id)}"${remindState[r.id] ? ' checked' : ''}>
+          <span class="txt">${esc(r.text)}${r.note ? `<small>${esc(r.note)}</small>` : ''}</span>
+        </label></li>`;
+    const more = sorted.slice(3);
     return `<section class="block" id="checks">
       <div class="card checks${done === list.length ? ' all-done' : ''}">
         <div class="ck-head"><b>${esc(title)}</b><span class="count${done === list.length ? ' full' : ''}">${done} / ${list.length}</span></div>
-        <ul class="checklist">${list.map((r) => `<li><label for="rm-${esc(r.id)}">
-          <input type="checkbox" id="rm-${esc(r.id)}" data-remind="${esc(r.id)}"${remindState[r.id] ? ' checked' : ''}>
-          <span class="txt">${esc(r.text)}${r.who || r.note ? `<small>${esc([r.who ? whoText(r.who) : '', r.note || ''].filter(Boolean).join(' · '))}</small>` : ''}</span>
-        </label></li>`).join('')}</ul>
+        <ul class="checklist">${sorted.slice(0, 3).map(row).join('')}</ul>
+        ${more.length ? `<details class="more"><summary><span>${more.length}개 더 보기</span><span>접기</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><ul class="checklist">${more.map(row).join('')}</ul></details>` : ''}
       </div>
     </section>`;
   }
@@ -1418,18 +1427,20 @@
   });
 
   /* 홈 바로가기: 후발대 안내 · 저녁 투표 · 사진첩 */
+  // 바로가기: 아이콘 + 짧은 이름만 한 줄로 (토스 메뉴처럼)
   function quickHTML(st) {
     const t = today();
+    const SVG = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
     const tiles = [];
     const G = T.guideB;
-    if (G && t <= toDate(G.until || T.end)) tiles.push(`<a class="qt" href="#guide"><span class="qt-ic">${ICON.plane}</span><b>후발대 안내</b><small>${esc(G.tile || '도착 · 출발 한눈에')}</small></a>`);
-    const openPolls = (T.polls || []).filter((p) => t <= toDate(p.closes));
-    if (openPolls.length) tiles.push(`<a class="qt" href="#ideas" data-goto="polls"><span class="qt-ic">${ICON.meal}</span><b>저녁 투표</b><small>${esc(openPolls.map((p) => p.short || p.title).join(' · '))}</small></a>`);
-    // 준비물은 탭에서 빠졌으니 바로가기로 (체크 개수도 같이)
-    const all = T.packing.reduce((n, sec) => n + sec.items.length, 0);
-    const done = T.packing.reduce((n, sec) => n + sec.items.filter((it) => packState[packKey(sec, it)]).length, 0);
-    tiles.push(`<a class="qt" href="#pack"><span class="qt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/></svg></span><b>준비물</b><small>${done ? `${done} / ${all} 챙김` : `${all}가지 체크리스트`}</small></a>`);
-    return `<section class="block"><div class="quick q${tiles.length}">${tiles.join('')}</div></section>`;
+    const p = me();
+    if (G && t <= toDate(G.until || T.end) && (!p || p.group === 'b')) tiles.push(['#guide', '', ICON.plane, '도착 안내', 'c1']);
+    const openPolls = (T.polls || []).filter((x) => t <= toDate(x.closes));
+    if (openPolls.length) tiles.push(['#ideas', 'polls', ICON.meal, '저녁 투표', 'c2']);
+    tiles.push(['#pack', '', SVG('<rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/>'), '준비물', 'c3']);
+    tiles.push(['#plan', 'map-plan', ICON.route, '이동 지도', 'c4']);
+    if (tiles.length < 4) tiles.push(['#album', '', SVG('<rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 8"/>'), '사진첩', 'c5']);
+    return `<section class="block"><nav class="qrow" aria-label="바로가기">${tiles.map(([href, go, ic, label, c]) => `<a class="qi ${c}" href="${href}"${go ? ` data-goto="${go}"` : ''}><span class="qi-ic">${ic}</span><span>${esc(label)}</span></a>`).join('')}</nav></section>`;
   }
 
   /* 7. 후발대 안내 (할아버지 · 할머니 · 선미 · 범준) */
@@ -1853,11 +1864,10 @@
     const p = me();
     const big = isBig();
     if (!p) {
-      return `<div class="me-bar"><span>누구세요? 고르면 <b>내 일정</b>만 크게 보여요</span><button type="button" class="me-btn primary" data-who-open>고르기</button></div>`;
+      return `<div class="me-bar"><button type="button" class="me-name" data-who-open>누구세요? <b>고르기</b></button><button type="button" class="me-big${big ? ' on' : ''}" data-big aria-pressed="${big}" aria-label="큰 글씨">가<small>+</small></button></div>`;
     }
-    return `<div class="me-bar"><span><b>${esc(p.name)}</b>${p.name.length > 2 ? '' : '님'} 화면이에요</span>
-      <button type="button" class="me-btn${big ? ' on' : ''}" data-big aria-pressed="${big}">${big ? '큰 글씨 켜짐' : '큰 글씨'}</button>
-      <button type="button" class="me-btn" data-who-open>사람 바꾸기</button></div>`;
+    return `<div class="me-bar"><button type="button" class="me-name" data-who-open aria-label="사람 바꾸기"><b>${esc(p.name)}</b>${p.name.length > 2 ? '' : '님'} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button type="button" class="me-big${big ? ' on' : ''}" data-big aria-pressed="${big}" aria-label="큰 글씨 ${big ? '끄기' : '켜기'}">가<small>${big ? '−' : '+'}</small></button></div>`;
   }
 
   function myCardHTML(st) {
@@ -1873,7 +1883,7 @@
     const left = dayDiff(today(), toDate(start));
     const badge = left > 0 ? `제주까지 ${left}일` : st.phase === 'during' ? `여행 ${st.index + 1}일째` : '';
     const next = upcoming[0];
-    const rest = upcoming.slice(1, 3);
+    const rest = upcoming.slice(1, 2);
     const when = (it) => `${it.date === nowIso ? '오늘' : `${dom(it.date)}일(${wd(it.date)})`} ${friendlyTime(it.time)}`;
     const leftMin = next && next.date === nowIso ? mins(next.time) - cur : null;
     const day = T.days.find((d) => d.date === (next && next.date));
