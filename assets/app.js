@@ -1129,7 +1129,7 @@
   function updateTopbar() {
     const st = tripState();
     const right = st.phase === 'before' ? `D-${st.dday}` : st.phase === 'during' ? `${st.index + 1}일차` : '';
-    topbar.innerHTML = `<b>${esc(TAB_TITLE[currentTab()])}</b><span>${esc(right)}</span>`;
+    topbar.innerHTML = `<b><img class="tb-logo" src="assets/logo.png" alt="" width="22" height="22">${esc(TAB_TITLE[currentTab()])}</b><span>${esc(right)}</span>`;
   }
   window.addEventListener('scroll', () => { topbar.classList.toggle('show', window.scrollY > 140); }, { passive: true });
 
