@@ -312,7 +312,6 @@
       </a>`;
     }).join('');
 
-    const legend = Object.entries(P.kinds).map(([k, name]) => `<span class="k-${k}"><i>${kindIcon(k)}</i>${esc(name)}</span>`).join('');
     return `<section class="block">
       <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">날짜를 누르면 자세히</span></div>
       <div class="card planner-card" data-sky>
@@ -324,7 +323,7 @@
           </div>
           ${cols}
         </div>
-        <p class="pl-legend">${legend}<span class="tbd"><i></i>미정</span></p>
+
       </div>
     </section>`;
   }
@@ -1436,7 +1435,7 @@
     const p = me();
     if (G && t <= toDate(G.until || T.end) && (!p || p.group === 'b')) tiles.push(['#guide', '', ICON.plane, '도착 안내', 'c1']);
     const openPolls = (T.polls || []).filter((x) => t <= toDate(x.closes));
-    if (openPolls.length) tiles.push(['#ideas', 'polls', ICON.meal, '저녁 투표', 'c2']);
+    if (openPolls.length) tiles.push(['#ideas', 'polls', ICON.meal, '가족 투표', 'c2']);
     tiles.push(['#pack', '', SVG('<rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/>'), '준비물', 'c3']);
     tiles.push(['#plan', 'map-plan', ICON.route, '이동 지도', 'c4']);
     if (tiles.length < 4) tiles.push(['#album', '', SVG('<rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 8"/>'), '사진첩', 'c5']);
@@ -1541,8 +1540,8 @@
   function pollsSectionHTML() {
     if (!(T.polls || []).length) return '';
     return `<section class="block" id="polls">
-      <h2 class="h">저녁 투표</h2>
-      <p class="lede">가고 싶은 곳에 하트를 눌러주세요. 여러 곳 눌러도 돼요. 마감 때 1등이 일정에 들어가요.</p>
+      <h2 class="h">가족 투표</h2>
+      <p class="lede">마음에 드는 곳에 하트를 눌러주세요. 여러 개 눌러도 돼요. 마감되면 1등이 일정에 들어가요.</p>
       <div data-polls></div>
     </section>`;
   }
@@ -1562,7 +1561,7 @@
             const mine = me && vs.includes(me);
             const top = lead && !lead.tie && lead.opt.id === o.id;
             return `<li class="${top ? 'top' : ''}">
-              <div class="po-t"><b>${esc(o.name)}${top ? ' <span class="po-1">1등</span>' : ''}</b><p>${esc([o.drive, o.desc].filter(Boolean).join(' · '))}</p>
+              <div class="po-t"><b>${esc(o.name)}${top ? ' <span class="po-1">1등</span>' : ''}</b><p>${esc([o.drive, o.desc].filter(Boolean).join(' · '))}</p>${o.plan ? `<ol class="po-plan">${o.plan.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}
                 ${vs.length ? `<p class="po-who">${esc(vs.join(' · '))}</p>` : ''}</div>
               ${naverSide(o.q || o.name)}
               <button type="button" class="heart${mine ? ' on' : ''}" data-vote="${esc(p.id)}|${esc(o.id)}" aria-pressed="${mine ? 'true' : 'false'}" aria-label="${esc(o.name)} 하트"${!ready || closed ? ' disabled' : ''}>
@@ -1574,9 +1573,7 @@
       }).join('')}`;
   }
   function pollDayHTML(day) {
-    const p = (T.polls || []).find((x) => x.day === day.date);
-    if (!p) return '';
-    return `<a class="poll-day" href="#ideas" data-goto="polls" data-poll-day="${esc(p.id)}">${ICON.meal}<span>${esc(p.short || p.title)} 투표 중</span><em></em></a>`;
+    return (T.polls || []).filter((x) => x.day === day.date).map((p) => `<a class="poll-day" href="#ideas" data-goto="polls" data-poll-day="${esc(p.id)}">${p.kind === 'course' ? ICON.route : ICON.meal}<span>${esc(p.short || p.title)} 투표 중</span><em></em></a>`).join('');
   }
   function fillPolls() {
     view.querySelectorAll('[data-polls]').forEach((el) => { el.innerHTML = pollsBodyHTML(); });

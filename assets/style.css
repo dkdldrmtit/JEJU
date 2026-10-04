@@ -994,8 +994,8 @@ p, li, dd, .note, .fb-text, .fb-ai p, .idea p, .voice-lead { text-wrap: pretty; 
 .poll-head b { font-size: var(--fs-base); }
 .poll-head span { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; white-space: nowrap; }
 .poll-opts { list-style: none; margin: 0; padding: 0; }
-.poll-opts li { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
-.poll-opts li.top .po-t > b { color: var(--tangerine-ink); }
+.poll-opts > li { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+.poll-opts > li.top .po-t > b { color: var(--tangerine-ink); }
 .po-t { flex: 1; min-width: 0; }
 .po-t b { font-size: .9375rem; }
 .po-t p { font-size: .78rem; color: var(--muted); line-height: 1.45; margin-top: 2px; }
@@ -1209,3 +1209,8 @@ body { background: var(--bg); }
 
 /* 탭바 · 상단 바도 같은 톤 */
 .tabbar { border-top: 1px solid var(--line); }
+
+/* 코스 투표: 시간 순서 */
+.po-plan { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+.po-plan li { position: relative; padding-left: 14px; font-size: .8rem; color: var(--ink); line-height: 1.45; }
+.po-plan li::before { content: ""; position: absolute; left: 3px; top: .55em; width: 5px; height: 5px; border-radius: 50%; background: var(--tangerine); }
