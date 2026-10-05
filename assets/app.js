@@ -179,20 +179,48 @@
   /* ---------- 홈 ---------- */
   // 태오 말풍선: 열 때마다 하나씩 랜덤 (방금 나온 건 피함), 태오를 누르면 다음 말
   let lastBubble = -1;
-  // 밤에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오 (없으면 기본 감귤 태오)
+  // 낮에는 여러 장 중 하나 (열 때마다 지난번과 다른 사진, 누르면 다음 사진)
+  // 밤에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오
+  const HERO_KEY = 'jeju2026.heroLast';
+  const dayLooks = (() => {
+    const H = T.hero || {};
+    return [{ photo: H.photo, w: 600, h: 736, alt: H.alt, bubbles: H.bubbles || [H.bubble] }].concat(H.looks || []).filter((x) => x.photo);
+  })();
+  let heroIdx = (() => {
+    if (dayLooks.length < 2) return 0;
+    let last = -1;
+    try { last = Number(localStorage.getItem(HERO_KEY) ?? -1); } catch (e) { /* 무시 */ }
+    let i;
+    do { i = Math.floor(Math.random() * dayLooks.length); } while (i === last);
+    try { localStorage.setItem(HERO_KEY, String(i)); } catch (e) { /* 무시 */ }
+    return i;
+  })();
   function heroLook() {
     const H = T.hero || {};
     if (H.after && tripState().phase === 'after') return H.after;
     const h = nowDate().getHours();
     if (H.night && (h >= H.night.from || h < H.night.to)) return H.night;
-    return null;
+    return { ...dayLooks[heroIdx], day: true };
   }
+  // 사진마다 실제 보이는 높이가 달라서, 말풍선을 태오 머리 바로 위에 붙임
+  function placeBubble() {
+    const fig = view.querySelector('.inv-photo');
+    const img = fig && fig.querySelector('[data-hero-img]');
+    const b = fig && fig.querySelector('[data-bubble]');
+    if (!img || !b) return;
+    const w = Number(img.getAttribute('width')) || 1;
+    const h = Number(img.getAttribute('height')) || 1;
+    const shown = Math.min(img.clientHeight, (img.clientWidth * h) / w);
+    const top = img.parentElement.offsetTop + img.offsetTop + img.clientHeight - shown - b.offsetHeight + 4;
+    b.style.top = `${Math.max(0, Math.round(top))}px`;
+  }
+  window.addEventListener('resize', () => placeBubble());
   function pickBubble() {
     const look = heroLook();
     const who = T.people.find((p) => p.name === savedName());
     // 고른 사람이 있으면 가끔 그 사람을 불러줌 (할머니 보고 싶어요!)
-    if (!look && who && who.call && Math.random() < 0.5 && lastBubble !== -2) { lastBubble = -2; return `${who.call} 보고 싶어요!`; }
-    const list = (look && look.bubbles) || (T.hero && (T.hero.bubbles || [T.hero.bubble])) || [''];
+    if (look.day && who && who.call && Math.random() < 0.4 && lastBubble !== -2) { lastBubble = -2; return `${who.call} 보고 싶어요!`; }
+    const list = look.bubbles || [''];
     if (list.length < 2) return list[0] || '';
     let i;
     do { i = Math.floor(Math.random() * list.length); } while (i === lastBubble);
@@ -220,9 +248,9 @@
         <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
         ${T.share ? `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>` : ''}
       </div>
-      ${H.photo ? `<figure class="inv-photo${look ? ' alt-look' : ''}">
+      ${look && look.photo ? `<figure class="inv-photo">
         <p class="inv-bubble" data-bubble aria-live="polite">${esc(pickBubble())}</p>
-        <span class="inv-flip f0" data-flip><img src="${esc(look ? look.photo : H.photo)}" alt="${esc((look || H).alt || '')}" width="${look ? look.w : 600}" height="${look ? look.h : 736}" fetchpriority="high"></span>
+        <span class="inv-flip f0" data-flip><img data-hero-img src="${esc(look.photo)}" alt="${esc(look.alt || '')}" width="${look.w}" height="${look.h}" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
     </section>`;
   }
@@ -754,8 +782,17 @@
       return;
     }
     if (e.target.closest('.inv-photo')) {
+      // 낮에는 누를 때마다 다음 태오 사진으로
+      const img = view.querySelector('[data-hero-img]');
+      if (img && heroLook().day && dayLooks.length > 1) {
+        heroIdx = (heroIdx + 1) % dayLooks.length;
+        const L = dayLooks[heroIdx];
+        lastBubble = -1;
+        img.src = L.photo; img.setAttribute('width', L.w); img.setAttribute('height', L.h); img.alt = L.alt || '';
+        img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap');
+      }
       const b = view.querySelector('[data-bubble]');
-      if (b) { b.textContent = pickBubble(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+      if (b) { b.textContent = pickBubble(); placeBubble(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
       return;
     }
     const tp = e.target.closest('[data-tpeek]');
@@ -2025,6 +2062,7 @@
     fillWeather();
     updateTopbar();
     animateIn();
+    placeBubble();
     if (view.querySelector('[data-share]')) loadKakaoShare();
     requestAnimationFrame(() => { buildSky(); onScroll(); });
     askWhoOnce();

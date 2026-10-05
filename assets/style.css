@@ -1274,3 +1274,29 @@ html.calm .tpeek img, html.calm .tp-b, html.calm .ck-yay img { animation: none !
 @media (prefers-reduced-motion: reduce) { .tpeek img, .tp-b, .ck-yay img { animation: none !important; } }
 /* 좁은 화면에서 '다녀왔어요'처럼 긴 배지는 작은 글씨를 숨겨 겹치지 않게 */
 @media (max-width: 360px) { .inv-dday.long span { display: none; } }
+
+/* =====================================================================
+   홈 큰 태오 — 더 크게, 사진마다 같은 높이로 (가로로 긴 사진은 넓게)
+   ===================================================================== */
+.inv-photo { padding-top: 84px; }
+.inv-photo .inv-flip img {
+  width: 118%; max-width: none; height: 236px; margin: 0 0 -6px -18%;
+  object-fit: contain; object-position: 50% 100%;
+}
+.inv-photo .inv-flip img.swap { animation: hero-swap .5s var(--ease) both; }
+@keyframes hero-swap { 0% { opacity: 0; transform: translateY(18px) scale(.9); } 60% { opacity: 1; transform: translateY(-6px) scale(1.03); } 100% { transform: none; } }
+.inv-bubble { top: 40px; font-size: 1rem; padding: 9px 13px 8px; }
+/* 사진 뒤 동그란 햇살 */
+.inv-photo::before {
+  content: ""; position: absolute; z-index: 0; right: -30px; bottom: -40px; width: 230px; height: 230px; border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 214 160 / .75) 0%, rgb(255 226 190 / .35) 55%, transparent 72%);
+  pointer-events: none;
+}
+.inv-photo .inv-flip { position: relative; z-index: 1; }
+@media (max-width: 360px) {
+  .inv-photo .inv-flip img { height: 206px; width: 116%; margin-left: -16%; }
+  .inv-bubble { font-size: .86rem; }
+}
+@media (min-width: 560px) { .inv-photo .inv-flip img { height: 260px; } }
+html.calm .inv-photo .inv-flip img.swap { animation: none; }
+.invite .inv-text { z-index: 2; } /* 좁은 화면에서 카톡 단추가 사진 위로 */

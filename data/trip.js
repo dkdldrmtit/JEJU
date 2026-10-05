@@ -28,9 +28,17 @@ window.TRIP = {
     photo: 'assets/photos/taeo-gyul.webp',
     plane: 'assets/photos/taeo-plane.webp', // 스크롤하면 따라 날아다니는 비행기 탄 태오
     alt: '감귤 모자와 주황 니트를 입고 활짝 웃는 태오',
+    // 낮에는 열 때마다 이 중 한 장 (위 감귤 태오 포함), 사진을 누르면 다음 사진
+    looks: [
+      { photo: 'assets/photos/taeo/hero-kitty.webp', w: 600, h: 496, alt: '두 팔 벌리고 깔깔 웃는 태오', bubbles: ['꺄르르! 제주 가요!', '안아 주세요!', '빨리 놀러 와요!'] },
+      { photo: 'assets/photos/taeo/hero-ball.webp', w: 560, h: 852, alt: '공을 잡으며 활짝 웃는 태오', bubbles: ['공 받아요!', '같이 놀아요!', '바닷가에서 놀래요!'] },
+      { photo: 'assets/photos/taeo/hero-banana.webp', w: 600, h: 673, alt: '바나나 치발기를 문 태오', bubbles: ['냠냠, 귤도 줘요', '맛있는 거 먹으러 가요', '흑돼지 먹을래요?'] },
+      { photo: 'assets/photos/taeo/hero-hold.webp', w: 600, h: 551, alt: '번쩍 안겨서 활짝 웃는 태오', bubbles: ['비행기 타고 슝~', '하늘 높이!', '제주에서 만나요!'] },
+      { photo: 'assets/photos/taeo/hero-peek.webp', w: 534, h: 607, alt: '고개를 돌려 쳐다보는 태오', bubbles: ['누구 왔어요?', '할머니?', '나 보러 왔어요?'] },
+    ],
     // 밤(21시~6시)에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오로 바뀜
     night: { photo: 'assets/photos/taeo/sleep.webp', w: 600, h: 552, from: 21, to: 6, alt: '수박 옷 입고 쌔근쌔근 자는 태오', bubbles: ['쿨쿨… 내일 만나요', '제주 꿈 꾸는 중', '쉿, 자는 중이에요'] },
-    after: { photo: 'assets/photos/taeo/hold.webp', w: 600, h: 482, alt: '번쩍 안겨서 활짝 웃는 태오', bubbles: ['또 가요!', '정말 재밌었어요!', '다음엔 어디 가요?'] },
+    after: { photo: 'assets/photos/taeo/hero-hold.webp', w: 600, h: 551, alt: '번쩍 안겨서 활짝 웃는 태오', bubbles: ['또 가요!', '정말 재밌었어요!', '다음엔 어디 가요?'] },
   },
   // 화면마다 오른쪽 위에서 인사하는 태오 (누르면 다른 말)
   taeo: {
@@ -45,7 +53,7 @@ window.TRIP = {
   },
   start: '2026-10-11',
   end: '2026-10-16',
-  updated: '2026-10-04',
+  updated: '2026-10-05',
   updatedBy: '민석',
 
   people: [
@@ -391,6 +399,7 @@ window.TRIP = {
 
   /* 업데이트 소식: 사이트가 바뀔 때마다 위에 한 줄씩 추가 (AI 반영 포함) */
   updates: [
+    { date: '2026-10-05', text: '홈의 태오 사진이 커지고, 열 때마다 다른 태오가 나와요 (사진을 누르면 다음 태오)' },
     { date: '2026-10-04', text: '화면마다 태오 사진 스티커가 인사해요 (누르면 다른 말) · 밤에는 홈의 태오가 쿨쿨 자요' },
     { date: '2026-10-04', text: '13일 오후 · 14일 나들이 코스 투표를 열었어요 (후보 탭)' },
     { date: '2026-10-04', text: '홈을 간결하게 정리했어요 · 정해진 것 · 할 일 · 업데이트 소식은 정보 탭으로' },
