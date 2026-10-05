@@ -1300,3 +1300,44 @@ html.calm .tpeek img, html.calm .tp-b, html.calm .ck-yay img { animation: none !
 @media (min-width: 560px) { .inv-photo .inv-flip img { height: 260px; } }
 html.calm .inv-photo .inv-flip img.swap { animation: none; }
 .invite .inv-text { z-index: 2; } /* 좁은 화면에서 카톡 단추가 사진 위로 */
+
+/* =====================================================================
+   큰 글씨 모드에서 사진이 글씨를 밀어내지 않게
+   (글씨만 커지고 태오 사진은 원래 크기 정도로)
+   ===================================================================== */
+html.big .tpeek { width: 92px; padding-top: 30px; }
+html.big .tp-guide { width: 100px; }
+html.big .tp-album { width: 82px; }
+html.big .tp-b { font-size: .74rem; }
+html.big .who-taeo { width: 96px; }
+html.big .ck-yay img { width: 88px; }
+@media (max-width: 360px) {
+  html.big .tpeek { width: 78px; }
+  html.big .tp-guide { width: 86px; }
+  html.big .tp-album { width: 70px; }
+}
+/* 홈 큰 사진: 조금 작게, 글씨 칸으로 덜 넘어오게, 말풍선은 두 줄까지 */
+html.big .inv-photo { padding-top: 64px; }
+html.big .inv-photo .inv-flip img { height: 196px; width: 106%; margin-left: -6%; }
+html.big .inv-bubble { white-space: normal; max-width: 140px; text-align: center; font-size: .86rem; right: 4px; padding: 7px 11px 6px; }
+@media (max-width: 400px) {
+  html.big .inv-note { display: none; }        /* 날짜가 있어서 '5박 6일' 줄은 생략 */
+  html.big .invite .dday span { display: none; } /* 'D-5' 만 */
+}
+@media (max-width: 360px) {
+  html.big .inv-photo .inv-flip img { height: 172px; }
+  html.big .inv-title { font-size: 1.7rem; }
+}
+/* 좁은 폰(갤럭시 360 등) + 큰 글씨: 제목·날짜는 위에 넓게, 아래는 왼쪽 글+카톡 단추 / 오른쪽 태오 */
+@media (max-width: 380px) {
+  html.big .invite { grid-template-columns: minmax(0, 1fr) 54%; grid-template-rows: auto auto auto 1fr auto; padding-left: 16px; }
+  html.big .invite .inv-text { display: contents; }
+  html.big .inv-eyebrow, html.big .inv-title, html.big .inv-dates { grid-column: 1 / -1; padding-right: 16px; }
+  html.big .inv-eyebrow { padding-right: 70px; }
+  html.big .inv-title { font-size: 1.75rem; }
+  html.big .invite .inv-note { display: block; grid-column: 1; grid-row: 4; align-self: end; margin: 0 0 10px; position: relative; z-index: 2; font-size: .8rem; line-height: 1.45; }
+  html.big .invite .kakao-share { grid-column: 1; grid-row: 5; justify-self: start; margin: 0 0 18px; position: relative; z-index: 2; font-size: .78rem; padding: 8px 12px 8px 10px; gap: 5px; }
+  html.big .invite .kakao-share svg { width: 15px; height: 15px; }
+  html.big .inv-photo { grid-column: 2; grid-row: 4 / 6; padding-top: 46px; }
+  html.big .inv-photo .inv-flip img { height: 176px; width: 100%; margin-left: 0; object-position: 100% 100%; }
+}
