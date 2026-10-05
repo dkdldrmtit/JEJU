@@ -16,6 +16,8 @@ window.TRIP = {
     text: '태오랑 제주 여행 가요! 10.11(일) – 10.16(금) 5박 6일, 일곱 식구가 제주에서 만나요.',
     image: 'https://dkdldrmtit.github.io/JEJU/assets/og-taeo-gyul3.jpg',
     button: '초대장 열기',
+    // 카카오 개발자 콘솔 [제품 링크 관리] > [웹 도메인] 에 https://dkdldrmtit.github.io 를 등록한 뒤 true 로 (그 전엔 휴대폰 공유창으로 보냄)
+    kakaoCard: false,
   },
   /* 여행 끝나고 추억 모아보기(#recap) 카톡 공유 */
   recap: {

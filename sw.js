@@ -4,7 +4,7 @@
  * - 사진·아이콘·글꼴: 저장해 둔 것 먼저 (빠름) → 뒤에서 새로 받아 둠
  * - 의견·투표·지도처럼 실시간인 것은 건드리지 않음 (사이트가 따로 마지막 내용을 기억해 둠)
  */
-const VERSION = '6106fa15fd';
+const VERSION = '0af240953a';
 const CORE_CACHE = `jeju-core-${VERSION}`;
 const MEDIA_CACHE = 'jeju-media-v1';
 const PHOTO_CACHE = 'jeju-family-photos-v1'; // 가족 사진첩 미리보기 (이 폰에만)

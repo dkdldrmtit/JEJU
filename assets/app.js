@@ -1165,6 +1165,13 @@
     const S = kind === 'guide' && T.guideB ? { ...base, ...T.guideB.share } : kind === 'recap' && T.recap ? { ...base, ...T.recap.share } : base;
     const url = ((T.site && T.site.url) || location.href.split('#')[0]) + (kind === 'guide' ? '#guide' : kind === 'recap' ? '#recap' : '');
     const link = { mobileWebUrl: url, webUrl: url };
+    // 카카오 개발자 설정에 사이트 도메인이 등록돼 있어야 카톡 카드 링크가 제대로 가요.
+    // 등록 전에는(kakaoCard: false) 휴대폰 공유창으로 주소를 그대로 보내요 → 카톡을 고르면 미리보기 그림도 떠요
+    const sheetFirst = !(T.share && T.share.kakaoCard) && navigator.share;
+    if (sheetFirst) {
+      try { await navigator.share({ title: S.title, text: S.text, url }); } catch (e) { /* 취소 */ }
+      return;
+    }
     if (kakaoShareReady()) {
       try {
         window.Kakao.Share.sendDefault({
