@@ -112,6 +112,42 @@
     const label = g ? (who === 'a' ? '태오네' : who === 'b' ? '후발대' : g.name) : membersOf(who).map((p) => p.name).join('·');
     return `<span class="wtag ${typeof who === 'string' ? esc(who) : 'p'}">${esc(label)}</span>`;
   }
+  const norm = (x) => String(x || '').replace(/[\s·()]/g, '');
+  function daySlots(day) {
+    const items = (day.items || []).map((it) => ({ ...it }));
+    const used = new Set();
+    (day.blocks || []).filter((b) => b[4] === 'tbd').forEach((b) => {
+      const [start, end, label, kind] = b;
+      const k = items.findIndex((it, j) => !used.has(j) && it.status === 'tbd'
+        && (it.time === start || norm(it.title).includes(norm(label)) || norm(label).includes(norm(it.title))));
+      const slot = { start, end, label, kind };
+      if (k >= 0) { used.add(k); items[k].slot = slot; return; }
+      const at = items.findIndex((it) => it.time && it.time > start);
+      const row = { time: start, title: label, status: 'tbd', slot, synthetic: true };
+      if (at < 0) items.push(row); else items.splice(at, 0, row);
+    });
+    return items;
+  }
+  function slotRowHTML(it, day) {
+    const S = it.slot;
+    const meal = S.kind === 'meal';
+    const poll = (T.polls || []).find((p) => p.day === day.date && (meal ? p.kind !== 'course' : p.kind === 'course') && today() <= toDate(p.closes));
+    const label = it.synthetic ? `${S.label.replace(/\s*\(미정\)|\s*미정/g, '')} · 아직 비어 있어요` : it.title;
+    return `<li class="item s-tbd slot">
+      <span class="time is-set">${esc(S.start)}</span>
+      <div class="what">
+        <div class="slot-box">
+          <p class="slot-t"><span class="slot-badge">빈 시간</span>${esc(S.start)}–${esc(S.end)}</p>
+          <p class="title">${esc(label)}</p>
+          ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
+          <div class="slot-acts">
+            ${poll ? `<a class="slot-btn vote" href="#ideas" data-goto="polls">${poll.kind === 'course' ? ICON.route : ICON.meal}<span>투표하러 가기</span></a>` : ''}
+            <button type="button" class="slot-btn" data-slot="${esc(day.date)}|${esc(S.start)}|${esc(S.end)}|${esc(S.label)}">＋ ${meal ? '먹고 싶은 곳' : '가고 싶은 곳'} 남기기</button>
+          </div>
+        </div>
+      </div>
+    </li>`;
+  }
   function itemHTML(it, present) {
     const hasTime = Boolean(it.time);
     const status = it.status || 'ok';
@@ -147,6 +183,7 @@
     const items = day.items || [];
     const hasRoute = (day.route || []).length > 1;
     const present = T.groups.filter((g) => day.date >= g.arrive.date && day.date <= g.depart.date).map((g) => g.id);
+    const rows = daySlots(day);
     return `<article class="day dayx${isToday ? ' is-today' : ''}" id="day-${day.date}" style="--dc:var(--d${i + 1})">
       <div class="day-body">
         <p class="dx-date"><b>${md(day.date)}</b> ${wd(day.date)}요일 <span class="dx-n">DAY ${i + 1}</span>${isToday ? '<span class="stub-today">오늘</span>' : ''}</p>
@@ -156,10 +193,10 @@
           ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선 지도</span></button>` : ''}
         </div>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
-        ${items.length ? `<ol class="items">${items.map((it) => itemHTML(it, present)).join('')}</ol>` : ''}
-        ${day.open ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
+        ${rows.length ? `<ol class="items">${rows.map((it) => (it.slot ? slotRowHTML(it, day) : itemHTML(it, present))).join('')}</ol>` : ''}
+        ${day.open && !rows.some((r) => r.slot) ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
         ${pollDayHTML(day)}
-        ${day.open ? `<div class="fb" data-fb-day="${day.date}"></div>` : ''}
+        <div class="fb" data-fb-day="${day.date}"></div>
         ${rainBoxHTML(day)}
         ${babyDayHTML(day)}
         ${night
@@ -570,6 +607,7 @@
     } else M.map.flyTo([pl.lat, pl.lon], 14, { duration: 0.6 });
   }
 
+  const JEJU_BOX = [[33.05, 125.95], [33.7, 127.0]]; // 남서쪽 · 북동쪽 끝 (마라도 ~ 우도 조금 바깥)
   async function initMaps() {
     Object.keys(maps).forEach((k) => { if (maps[k].kind === 'leaflet') maps[k].map.remove(); delete maps[k]; });
     const boxes = [...view.querySelectorAll('.route-map[data-map]')];
@@ -584,6 +622,14 @@
         const K = window.kakao.maps;
         const map = new K.Map(el, { center: new K.LatLng(33.38, 126.45), level: 10 });
         map.addControl(new K.ZoomControl(), K.ControlPosition.RIGHT);
+        // 제주도 밖으로는 안 나가게: 더 멀리 축소 못 하고, 중심이 섬 밖으로 나가면 되돌림
+        map.setMaxLevel(10);
+        K.event.addListener(map, 'idle', () => {
+          const c = map.getCenter();
+          const lat = Math.min(JEJU_BOX[1][0], Math.max(JEJU_BOX[0][0], c.getLat()));
+          const lon = Math.min(JEJU_BOX[1][1], Math.max(JEJU_BOX[0][1], c.getLng()));
+          if (lat !== c.getLat() || lon !== c.getLng()) map.panTo(new K.LatLng(lat, lon));
+        });
         if (touch) {
           map.setDraggable(false);
           K.event.addListener(map, 'click', () => { map.setDraggable(true); box.classList.add('map-active'); });
@@ -593,7 +639,8 @@
       } else {
         const L = window.L;
         if (!L || !el) { box.classList.add('no-map'); return; }
-        const map = L.map(el, { scrollWheelZoom: false, dragging: !touch, tap: false, zoomControl: true, attributionControl: true });
+        // 제주도 밖으로는 안 나가게 (섬 전체가 보이는 정도까지만 축소)
+        const map = L.map(el, { scrollWheelZoom: false, dragging: !touch, tap: false, zoomControl: true, attributionControl: true, minZoom: 9, maxBounds: JEJU_BOX, maxBoundsViscosity: 1 });
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -786,8 +833,34 @@
   function savePack(state) {
     try { localStorage.setItem(PACK_KEY, JSON.stringify(state)); } catch (e) { /* 저장이 막힌 브라우저: 화면에서만 유지 */ }
   }
-  let packState = loadPack();
-  const packKey = (section, item) => `${section.title}::${typeof item === 'string' ? item : item.t}`;
+  // 체크는 물건 이름으로 기억 (예전엔 '구역::이름' 이었어서 한 번 옮겨 줌)
+  let packState = (() => {
+    const st = loadPack();
+    let moved = false;
+    Object.keys(st).forEach((k) => { if (k.includes('::')) { st[k.split('::').pop()] = st[k]; delete st[k]; moved = true; } });
+    if (moved) savePack(st);
+    return st;
+  })();
+  const packKey = (section, item) => (typeof item === 'string' ? item : item.t);
+  const PACK_HIDE = 'jeju2026.packHide';
+  const packHide = () => store.get(PACK_HIDE) === '1';
+  const packDone = (sec) => sec.items.filter((it) => packState[packKey(sec, it)]).length;
+
+  function packSummaryHTML() {
+    const all = T.packing.reduce((a, sec) => a + sec.items.length, 0);
+    const done = T.packing.reduce((a, sec) => a + packDone(sec), 0);
+    const pct = all ? Math.round((done / all) * 100) : 0;
+    return `<div class="card pk-sum">
+      <div class="pk-sum-top"><p><b>${done}</b> / ${all}개 챙겼어요</p><span class="pk-pct${done === all ? ' full' : ''}">${done === all ? '다 챙겼어요!' : `${pct}%`}</span></div>
+      <div class="pk-bar"><i style="width:${pct}%"></i></div>
+      <div class="pk-cats">${T.packing.map((sec, si) => {
+        const d = packDone(sec);
+        const full = d === sec.items.length;
+        return `<a class="pk-cat${full ? ' full' : ''}" href="#pack" data-pack-jump="${si}"><span class="pk-ic" aria-hidden="true">${esc(sec.icon || '📦')}</span><span class="pk-n">${esc(sec.short || sec.title)}</span><span class="pk-c">${full ? '✓' : `${d}/${sec.items.length}`}</span></a>`;
+      }).join('')}</div>
+      <label class="pk-hide"><input type="checkbox" data-pack-hide${packHide() ? ' checked' : ''}><span>챙긴 건 숨기기</span></label>
+    </div>`;
+  }
 
   function renderPack() {
     const sections = T.packing.map((sec, si) => {
@@ -796,16 +869,23 @@
         const text = typeof it === 'string' ? it : it.t;
         const note = typeof it === 'string' ? '' : it.n;
         const id = `pk-${si}-${ii}`;
-        return `<li><label for="${id}">
+        return `<li${packState[key] ? ' class="is-done"' : ''}><label for="${id}">
           <input type="checkbox" id="${id}" data-key="${esc(key)}"${packState[key] ? ' checked' : ''}>
           <span class="txt">${esc(text)}${note ? `<small>${esc(note)}</small>` : ''}</span>
         </label></li>`;
       }).join('');
-      const done = sec.items.filter((it) => packState[packKey(sec, it)]).length;
-      return `<section class="block" data-sec="${si}">
-        <div class="h-row"><h2 class="h">${esc(sec.title)}</h2><span class="count${done === sec.items.length ? ' full' : ''}">${done} / ${sec.items.length}</span></div>
-        ${sec.note ? `<p class="lede">${esc(sec.note)}</p>` : ''}
-        <div class="card"><ul class="checklist">${items}</ul></div>
+      const done = packDone(sec);
+      return `<section class="block pk-sec${done === sec.items.length ? ' all-done' : ''}" data-sec="${si}" id="pk-sec-${si}">
+        <div class="card pk-card">
+          <div class="pk-head">
+            <span class="pk-ic" aria-hidden="true">${esc(sec.icon || '📦')}</span>
+            <h2 class="pk-title">${esc(sec.title)}${sec.who ? `<span class="pk-who">${esc(sec.who)}</span>` : ''}</h2>
+            <span class="count${done === sec.items.length ? ' full' : ''}">${done} / ${sec.items.length}</span>
+          </div>
+          ${sec.note ? `<p class="pk-note">${esc(sec.note)}</p>` : ''}
+          <ul class="checklist">${items}</ul>
+          <p class="pk-alldone">다 챙겼어요 ✓</p>
+        </div>
       </section>`;
     }).join('');
 
@@ -813,21 +893,40 @@
         <a class="back-link" href="#info">← 정보</a>
         ${peekHTML('pack')}
         <h1 class="page-title">준비물</h1>
-        <p class="lede">체크 표시는 지금 보고 있는 휴대폰에만 저장돼요. 각자 폰에서 체크하면 돼요.</p>
+        <p class="lede">체크는 지금 보는 휴대폰에만 저장돼요. 각자 폰에서 체크하면 돼요.</p>
       </section>
-      ${sections}
+      <section class="block" data-pack-sum>${packSummaryHTML()}</section>
+      <div class="pk-list${packHide() ? ' hide-done' : ''}">${sections}</div>
       <section class="block"><button class="btn" type="button" id="pack-reset">체크 모두 지우기</button></section>`;
   }
 
   function refreshPackCounts() {
     view.querySelectorAll('[data-sec]').forEach((el) => {
       const sec = T.packing[Number(el.dataset.sec)];
-      const done = sec.items.filter((it) => packState[packKey(sec, it)]).length;
+      const done = packDone(sec);
       const c = el.querySelector('.count');
       c.textContent = `${done} / ${sec.items.length}`;
       c.classList.toggle('full', done === sec.items.length);
+      el.classList.toggle('all-done', done === sec.items.length);
+      el.querySelectorAll('input[data-key]').forEach((b) => b.closest('li').classList.toggle('is-done', b.checked));
     });
+    const sum = view.querySelector('[data-pack-sum]');
+    if (sum) sum.innerHTML = packSummaryHTML();
   }
+  view.addEventListener('change', (e) => {
+    const h = e.target.closest('[data-pack-hide]');
+    if (!h) return;
+    store.set(PACK_HIDE, h.checked ? '1' : '0');
+    const list = view.querySelector('.pk-list');
+    if (list) list.classList.toggle('hide-done', h.checked);
+  });
+  view.addEventListener('click', (e) => {
+    const j = e.target.closest('[data-pack-jump]');
+    if (!j) return;
+    e.preventDefault();
+    const el = document.getElementById(`pk-sec-${j.dataset.packJump}`);
+    if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  });
 
   let resetArmed = null;
   view.addEventListener('change', (e) => {
@@ -864,6 +963,22 @@
       }
       const b = view.querySelector('[data-bubble]');
       if (b) { b.textContent = pickBubble(); placeBubble(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+      return;
+    }
+    const sl = e.target.closest('[data-slot]');
+    if (sl) {
+      const [d, a, b, label] = sl.dataset.slot.split('|');
+      fbOpen = d;
+      fillFeedback();
+      const form = view.querySelector(`.fb-form[data-day="${d}"]`);
+      const ta = form && form.querySelector('textarea');
+      if (ta) {
+        const pre = `${dom(d)}일 ${a}~${b} (${label.replace(/\s*\(미정\)/, '')}): `;
+        if (!ta.value.trim()) ta.value = pre;
+        ta.focus({ preventScroll: true });
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+        form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      }
       return;
     }
     const pd = e.target.closest('[data-plan-day]');
@@ -992,7 +1107,7 @@
       <section class="block"><h2 class="h">누가 언제 오고 가요</h2><ul class="stack">${groupsHTML}</ul>
         ${T.guideB ? `<a class="btn-link" href="#guide">${esc(T.guideB.linkText || '후발대 안내 보기')}</a>` : ''}</section>
       <section class="block"><h2 class="h">준비물</h2>
-        <a class="card map-teaser" href="#pack"><span class="mt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/></svg></span><span class="mt-t"><b>준비물 체크리스트</b><small>모두 · 태오 · 운전 — 체크는 각자 휴대폰에 저장</small></span><svg class="mt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="card map-teaser" href="#pack"><span class="mt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/></svg></span><span class="mt-t"><b>준비물 체크리스트</b><small>꼭 챙길 것 · 옷 · 태오 · 운전 — 체크는 각자 휴대폰에 저장</small></span><svg class="mt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
       </section>
       <section class="block"><h2 class="h">숙소</h2><ul class="stack">${staysHTML}</ul></section>
       <section class="block"><h2 class="h">렌터카</h2>${carHTML}</section>

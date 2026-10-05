@@ -1486,3 +1486,63 @@ html.calm .plan-panel.slide .day { animation: none; }
 .nt-until input:focus-visible + span { outline: 2px solid var(--sea); outline-offset: 2px; }
 .nt-btns { display: flex; gap: 8px; }
 .nt-btns .btn { flex: 1; }
+
+/* 일정: 빈 시간 (눌러서 가고 싶은 곳 남기기) */
+.item.slot .what::before { background: var(--surface); box-shadow: 0 0 0 3px var(--surface), inset 0 0 0 2px var(--tangerine); }
+.slot-box {
+  padding: 12px 14px; border-radius: 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--tangerine) 65%, #fff);
+  background: repeating-linear-gradient(135deg, #FFF9F2 0 10px, #FFF4E8 10px 20px);
+}
+.slot-t { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; color: var(--tangerine-ink); font-variant-numeric: tabular-nums; }
+.slot-badge { padding: 2px 7px; border-radius: 999px; background: var(--tangerine); color: #fff; font-size: .68rem; font-weight: 800; }
+.slot-box .title { margin-top: 4px; color: var(--ink); }
+.slot-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.slot-btn {
+  appearance: none; font: inherit; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px; border-radius: 999px;
+  border: 0; background: #fff; color: var(--tangerine-ink); font-weight: 800; font-size: var(--fs-sm);
+  box-shadow: 0 2px 8px rgb(226 107 18 / .14);
+}
+.slot-btn svg { width: 16px; height: 16px; }
+.slot-btn.vote { background: var(--tangerine); color: #fff; }
+.slot-btn:active { transform: scale(.97); }
+
+/* =====================================================================
+   준비물: 한눈에 보는 요약 + 종류별 카드
+   ===================================================================== */
+.pk-sum { padding: 18px; }
+.pk-sum-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pk-sum-top p { font-size: var(--fs-base); font-weight: 700; color: var(--muted); }
+.pk-sum-top b { font-family: var(--font-display); font-weight: 400; font-size: 2rem; color: var(--ink); }
+.pk-pct { font-weight: 800; color: var(--tangerine-ink); }
+.pk-pct.full { color: var(--sea-ink); }
+.pk-bar { height: 10px; margin-top: 10px; border-radius: 999px; background: var(--sunken); overflow: hidden; }
+.pk-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--tangerine), #F7A23B); transition: width .4s var(--ease); }
+.pk-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.pk-cat {
+  display: grid; justify-items: center; gap: 2px; padding: 10px 4px 9px; border-radius: 16px;
+  background: var(--sunken); color: var(--ink); text-decoration: none; text-align: center;
+}
+.pk-cat .pk-ic { font-size: 1.45rem; line-height: 1.2; }
+.pk-n { font-size: .74rem; font-weight: 700; line-height: 1.25; word-break: keep-all; }
+.pk-c { font-size: .72rem; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pk-cat.full { background: var(--sea-soft); }
+.pk-cat.full .pk-c { color: var(--sea-ink); }
+.pk-hide { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: var(--fs-sm); font-weight: 700; color: var(--muted); cursor: pointer; }
+.pk-hide input { width: 18px; height: 18px; accent-color: var(--ink); }
+
+.pk-sec { margin-top: 14px; scroll-margin-top: 70px; }
+.pk-card { padding: 16px 16px 8px; }
+.pk-head { display: flex; align-items: center; gap: 10px; }
+.pk-head .pk-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: var(--sunken); font-size: 1.3rem; }
+.pk-title { flex: 1; min-width: 0; font-size: 1.08rem; font-weight: 800; letter-spacing: -.01em; }
+.pk-who { display: inline-block; margin-left: 6px; vertical-align: 2px; font-size: .68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+.pk-note { margin-top: 10px; padding: 9px 12px; border-radius: 12px; background: var(--sea-soft); color: var(--sea-ink); font-size: var(--fs-sm); line-height: 1.5; }
+.pk-card .checklist { margin-top: 6px; }
+.pk-card .checklist li.is-done .txt { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
+.pk-card .checklist li.is-done small { text-decoration: none; }
+.pk-alldone { display: none; padding: 6px 0 10px; font-weight: 800; color: var(--sea-ink); }
+.hide-done .checklist li.is-done { display: none; }
+.hide-done .pk-sec.all-done .pk-alldone { display: block; }
+.hide-done .pk-sec.all-done .pk-note { display: none; }
