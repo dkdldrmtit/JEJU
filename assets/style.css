@@ -1664,3 +1664,6 @@ html.calm .pb.tbd, html.calm .pb-badge.on { animation: none; }
 .blk-form textarea { flex: 1; min-height: 46px; }
 .blk-form .btn { flex: none; }
 .blk-day { display: block; margin-top: 16px; font-weight: 800; font-size: var(--fs-sm); }
+/* 사진 끝이 잘린 태오(자는 사진 주먹)는 카드 오른쪽 밖으로 살짝 밀어서 잘린 곳이 안 보이게 */
+.inv-photo.edge-r .inv-flip { position: relative; left: 15%; }
+.inv-photo.edge-r .inv-bubble { right: 18%; }

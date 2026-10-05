@@ -312,7 +312,7 @@
         <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
         ${T.share ? `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>` : ''}
       </div>
-      ${look && look.photo ? `<figure class="inv-photo">
+      ${look && look.photo ? `<figure class="inv-photo${look.edge ? ` edge-${esc(look.edge)}` : ''}">
         <p class="inv-bubble" data-bubble aria-live="polite">${esc(pickBubble())}</p>
         <span class="inv-flip f0" data-flip><img data-hero-img src="${esc(look.photo)}" alt="${esc(look.alt || '')}" width="${look.w}" height="${look.h}" fetchpriority="high"></span>
       </figure>` : ICON.mandarin}
