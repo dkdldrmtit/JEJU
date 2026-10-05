@@ -160,7 +160,11 @@
       </div>
     </li>`;
   }
-  function itemHTML(it, present) {
+  function blockAt(day, time) {
+    if (!time) return -1;
+    return (day.blocks || []).findIndex((b) => b[0] <= time && time < b[1]);
+  }
+  function itemHTML(it, present, blk) {
     const hasTime = Boolean(it.time);
     const status = it.status || 'ok';
     const note = it.note || '';
@@ -172,6 +176,7 @@
           <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}${whoTag(it.who, present)}</p>
           ${note ? `<p class="note">${esc(note)}</p>${long ? '<span class="note-more" aria-hidden="true">더보기</span>' : ''}` : ''}
         </div>${it.place ? naverSide(it.place) : ''}</div>
+        ${blk ? `<button type="button" class="it-rx" data-blk="${blk}">반응 · 의견<i class="pb-badge" data-blk-badge="${blk}"></i></button>` : ''}
         ${photoOf(it.photo) ? `<figure class="item-photo"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
       </div>
     </li>`;
@@ -205,7 +210,7 @@
           ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선 지도</span></button>` : ''}
         </div>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
-        ${rows.length ? `<ol class="items">${rows.map((it) => (it.slot ? slotRowHTML(it, day) : itemHTML(it, present))).join('')}</ol>` : ''}
+        ${rows.length ? `<ol class="items">${rows.map((it) => { if (it.slot) return slotRowHTML(it, day); const bk = blockAt(day, it.time); return itemHTML(it, present, bk >= 0 ? `${i}|${bk}` : ''); }).join('')}</ol>` : ''}
         ${day.open && !rows.some((r) => r.slot) ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
         ${pollDayHTML(day)}
         <div class="fb" data-fb-day="${day.date}"></div>
@@ -405,7 +410,7 @@
         const len = toH(b) - toH(a);
         const ph = len >= 1.5 ? photoOf(pk) : null;
         const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : '', ph ? 'has-photo' : ''].filter(Boolean).join(' ');
-        return `<span class="${cls}" style="--c:${i};--k:${bk};top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)${ph ? `;--ph:url('${esc(new URL(ph.src, document.baseURI).href)}');--pp:${esc(ph.pos || 'center')}` : ''}" title="${esc(`${a}–${b} ${label}`)}">${len >= 1.5 && !tbd ? kindIcon(kind) : ''}<b>${esc(label)}</b>${len >= 1.8 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}</span>`;
+        return `<button type="button" class="${cls}" data-blk="${i}|${bk}" style="--c:${i};--k:${bk};top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)${ph ? `;--ph:url('${esc(new URL(ph.src, document.baseURI).href)}');--pp:${esc(ph.pos || 'center')}` : ''}" aria-label="${esc(`${mdw(day.date)} ${a}–${b} ${label} 자세히 · 반응 · 의견`)}">${len >= 1.5 && !tbd ? kindIcon(kind) : ''}<b>${esc(label)}</b>${len >= 1.8 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}<i class="pb-badge" data-blk-badge="${i}|${bk}"></i></button>`;
       }).join('');
       let now = '';
       if (isToday) {
@@ -414,15 +419,15 @@
         if (h >= P.from && h <= P.to) now = `<span class="pl-now" style="top:${at(h)}%"></span>`;
       }
       const night = day.night ? stays.get(day.night).short : '집';
-      return `<a class="pl-col${isToday ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}" href="#plan" data-goto="day-${day.date}" aria-label="${esc(`${mdw(day.date)} ${day.title}`)}">
-        <span class="pl-head"><span class="pl-wd">${wd(day.date)}</span><b>${dom(day.date)}</b><span class="pl-wx" data-wx="${day.date}" data-wx-open="${day.date}" role="button" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxMiniHTML(day.date)}</span></span>
+      return `<div class="pl-col${isToday ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}">
+        <a class="pl-head" href="#plan" data-goto="day-${day.date}" aria-label="${esc(`${mdw(day.date)} ${day.title} 일정 보기`)}"><span class="pl-wd">${wd(day.date)}</span><b>${dom(day.date)}</b><span class="pl-wx" data-wx="${day.date}" data-wx-open="${day.date}" role="button" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxMiniHTML(day.date)}</span></a>
         <span class="pl-body">${blocks}${now}</span>
         <span class="pl-night">${esc(night)}</span>
-      </a>`;
+      </div>`;
     }).join('');
 
     return `<section class="block">
-      <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">날짜를 누르면 자세히</span></div>
+      <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">칸을 누르면 자세히 · 반응 · 의견</span></div>
       <div class="card planner-card" data-sky>
         <div class="planner" style="--hours:${span}">
           <div class="pl-axis" aria-hidden="true">
@@ -786,6 +791,7 @@
     fillFeedback();
     fillPolls();
     fillWeather();
+    fillBlockBadges();
     if (view.querySelector('.route-map[data-map="plan"]')) selectMapDay('plan', String(k), false);
     // 아래로 내려가 있었으면 날짜 탭이 보이게 위로
     const tabs = view.querySelector('.dtabs');
@@ -1334,6 +1340,7 @@
     fillNotice();
     fillRecap();
     if (currentTab() === 'plan') refreshPlanPanel();
+    fillBlockBadges();
     if (photosOn && photoKey()) loadPhotos();
     else fillAlbum();
   }
@@ -2050,7 +2057,7 @@
     const list = photos || [];
     const stats = view.querySelector('[data-recap-stats]');
     if (stats) {
-      const nVotes = Object.values(votes || {}).reduce((a, p) => a + Object.values(p).reduce((b, arr) => b + arr.length, 0), 0);
+      const nVotes = Object.entries(votes || {}).filter(([k]) => !k.startsWith('rx:')).reduce((a, [, p]) => a + Object.values(p).reduce((b, arr) => b + arr.length, 0), 0);
       const cell = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
       stats.innerHTML = cell(T.days.length, '일') + cell(photoKey() && photos ? list.length : '🔒', '사진') + cell(items.length, '의견') + cell(nVotes, '표')
         + (photosOn && !photoKey() ? '<a class="rc-lock" href="#album">가족 비밀번호를 넣으면 날짜별 사진도 보여요 →</a>' : '');
@@ -2401,6 +2408,7 @@
     updateTopbar();
     animateIn();
     placeBubble();
+    fillBlockBadges();
     if (view.querySelector('[data-share]')) loadKakaoShare();
     requestAnimationFrame(() => { buildSky(); onScroll(); });
     askWhoOnce();
@@ -2423,6 +2431,146 @@
     const el = document.getElementById(`day-${st.iso}`);
     if (el) el.scrollIntoView({ block: 'start' });
   }
+
+  /* ---------- 시간표 칸 자세히: 그 시간의 일정 · 반응(❤️🙋😋👶) · 의견 ---------- */
+  // 반응은 투표 시트를 같이 써요 (투표 이름 'rx:날짜:시작시간', 다시 누르면 취소)
+  const RX = [['love', '❤️', '기대돼요'], ['me', '🙋', '나도 할래'], ['yum', '😋', '맛있겠다'], ['cam', '📸', '사진 찍자'], ['baby', '👶', '태오도 좋아요']];
+  const rxKey = (date, start) => `rx:${date}:${start}`;
+  const rxList = (kind) => RX.filter(([k]) => (kind === 'meal' ? k !== 'cam' : k !== 'yum'));
+  function blkInfo(v) {
+    const [di, bk] = String(v).split('|').map(Number);
+    const day = T.days[di];
+    const b = day && day.blocks && day.blocks[bk];
+    if (!b) return null;
+    const [start, end, label, kind, tbd, pk] = b;
+    return { di, bk, day, start, end, label, kind, tbd, pk };
+  }
+  const blkComments = (B) => (fbItems || []).filter((x) => x.day === B.day.date && String(x.text).includes(`${B.start}~${B.end}`));
+  function blkCounts(B) {
+    const r = (votes || {})[rxKey(B.day.date, B.start)] || {};
+    const n = Object.values(r).reduce((a, arr) => a + arr.length, 0);
+    return { rx: n, top: Object.entries(r).sort((a, b) => b[1].length - a[1].length)[0], cm: blkComments(B).length };
+  }
+  function fillBlockBadges() {
+    document.querySelectorAll('[data-blk-badge]').forEach((el) => {
+      const B = blkInfo(el.dataset.blkBadge);
+      if (!B) return;
+      const c = blkCounts(B);
+      const em = c.top && c.top[1].length ? (RX.find(([k]) => k === c.top[0]) || [])[1] : '';
+      el.textContent = [c.rx ? `${em || '❤️'}${c.rx}` : '', c.cm ? `💬${c.cm}` : ''].filter(Boolean).join(' ');
+      el.classList.toggle('on', Boolean(c.rx || c.cm));
+    });
+  }
+  function blockItems(B) {
+    return (B.day.items || []).filter((it) => (it.time ? it.time >= B.start && it.time < B.end : norm(it.title).includes(norm(B.label)) || norm(B.label).includes(norm(it.title))));
+  }
+  let blkOpen = null;
+  function openBlockSheet(v) {
+    const B = blkInfo(v);
+    if (!B) return;
+    blkOpen = v;
+    const ph = photoOf(B.pk);
+    const items = blockItems(B);
+    const meal = B.kind === 'meal';
+    const poll = B.tbd && (T.polls || []).find((p) => p.day === B.day.date && (meal ? p.kind !== 'course' : p.kind === 'course') && today() <= toDate(p.closes));
+    wxSheet.innerHTML = `<div class="sheet-panel blk-panel k-${esc(B.kind)}" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      ${ph ? `<div class="blk-photo" style="background-image:url('${esc(new URL(ph.src, document.baseURI).href)}');background-position:${esc(ph.pos || 'center')}"></div>` : ''}
+      <div class="ws-head"><div><p class="ws-day">${esc(mdw(B.day.date))} · ${esc(B.start)}–${esc(B.end)}</p><p class="ws-main"><span class="blk-kind">${kindIcon(B.kind)}</span><b>${esc(B.label)}</b>${B.tbd ? '<span class="slot-badge">빈 시간</span>' : ''}</p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
+      <div class="blk-body">
+        ${items.length ? `<ul class="blk-items">${items.map((it) => `<li><span class="bi-t">${esc(it.time || it.when || '')}</span><div><b>${esc(it.title)}</b>${it.status && it.status !== 'ok' ? ` ${pill(it.status)}` : ''}${it.note ? `<p>${esc(it.note)}</p>` : ''}${it.place ? `<a class="bi-map" href="https://map.naver.com/p/search/${encodeURIComponent(it.place)}" target="_blank" rel="noopener">지도에서 보기</a>` : ''}</div></li>`).join('')}</ul>` : ''}
+        ${B.tbd ? `<div class="slot-acts">${poll ? `<a class="slot-btn vote" href="#ideas" data-goto="polls" data-sheet-close>${poll.kind === 'course' ? ICON.route : ICON.meal}<span>투표하러 가기</span></a>` : ''}<button type="button" class="slot-btn find" data-place-find="${esc(B.day.date)}|${esc(B.start)}|${esc(B.end)}|${esc(B.label)}|${esc(B.kind)}">🔍 ${meal ? '먹을 곳' : '갈 곳'} 찾아서 제안</button></div>` : ''}
+        <div class="blk-rx" data-blk-rx></div>
+        <div class="blk-cm">
+          <p class="blk-h">이 시간 이야기</p>
+          <div data-blk-cms></div>
+          <form class="blk-form" data-blk-form>
+            <textarea name="t" class="fb-input" rows="2" maxlength="300" placeholder="${B.tbd ? '여기서 뭐 하고 싶어요?' : '기대되는 거, 궁금한 거, 아무거나'}"></textarea>
+            <button type="submit" class="btn primary">남기기</button>
+          </form>
+          <p class="fb-status" data-blk-status aria-live="polite"></p>
+        </div>
+        <a class="blk-day" href="#plan" data-goto="day-${esc(B.day.date)}" data-sheet-close>${esc(dom(B.day.date))}일 일정 전체 보기 →</a>
+      </div>
+    </div>`;
+    wxSheet.hidden = false;
+    fillBlockSheet();
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+  }
+  function fillBlockSheet() {
+    const B = blkOpen && blkInfo(blkOpen);
+    if (!B || wxSheet.hidden) return;
+    const rxEl = wxSheet.querySelector('[data-blk-rx]');
+    const cmEl = wxSheet.querySelector('[data-blk-cms]');
+    if (!rxEl || !cmEl) return;
+    const r = (votes || {})[rxKey(B.day.date, B.start)] || {};
+    const me = savedName();
+    rxEl.innerHTML = `<div class="rx-row">${rxList(B.kind).map(([k, e, l]) => {
+      const who = r[k] || [];
+      const on = me && who.includes(me);
+      return `<button type="button" class="rx${on ? ' on' : ''}" data-rx="${k}" aria-pressed="${Boolean(on)}"><span class="rx-e">${e}</span><span class="rx-l">${esc(l)}</span>${who.length ? `<b>${who.length}</b>` : ''}</button>`;
+    }).join('')}</div>
+      ${Object.values(r).some((a) => a.length) ? `<p class="rx-who">${rxList(B.kind).filter(([k]) => (r[k] || []).length).map(([k, e]) => `${e} ${esc(r[k].join(' · '))}`).join('<br>')}</p>` : '<p class="rx-who">처음으로 반응을 남겨 보세요</p>'}`;
+    const cms = blkComments(B);
+    cmEl.innerHTML = cms.length ? `<ul class="blk-cms">${cms.map((x) => `<li><b>${esc(x.name || '가족')}</b><p>${esc(String(x.text).replace(/^\d+일 [\d:]+~[\d:]+ \([^)]*\):\s*/, ''))}</p>${x.ai ? `<p class="blk-ai">✦ ${esc(String(x.ai).split('\n')[0])}</p>` : ''}</li>`).join('')}</ul>` : '<p class="blk-empty">아직 이야기가 없어요</p>';
+  }
+  async function toggleRx(k) {
+    const B = blkOpen && blkInfo(blkOpen);
+    if (!B) return;
+    const name = savedName();
+    if (!name) { toast('먼저 이름을 골라 주세요'); openWho(); return; }
+    const poll = rxKey(B.day.date, B.start);
+    votes = votes || {};
+    const pv = (votes[poll] = votes[poll] || {});
+    const arr = (pv[k] = pv[k] || []);
+    const i = arr.indexOf(name);
+    if (i >= 0) arr.splice(i, 1); else arr.push(name);
+    fillBlockSheet();
+    fillBlockBadges();
+    try {
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'vote', poll, option: k, name }) });
+      const data = await res.json();
+      if (data.ok && data.votes) { votes = data.votes; fillBlockSheet(); fillBlockBadges(); }
+    } catch (e) { toast('인터넷이 안 돼서 반응이 저장되지 않았어요'); }
+  }
+  async function sendBlockComment(form) {
+    const B = blkOpen && blkInfo(blkOpen);
+    if (!B) return;
+    const t = String(new FormData(form).get('t') || '').trim();
+    const st = wxSheet.querySelector('[data-blk-status]');
+    if (!t) { st.textContent = '내용을 적어 주세요'; return; }
+    const name = savedName();
+    if (!name) { toast('먼저 이름을 골라 주세요'); openWho(); return; }
+    const text = `${dom(B.day.date)}일 ${B.start}~${B.end} (${String(B.label).replace(/\s*\(미정\)/, '')}): ${t}`;
+    st.textContent = '올리는 중…';
+    try {
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'add', name, day: B.day.date, text, link: '', website: '' }) });
+      const data = await res.json();
+      if (!data.ok) throw new Error('fail');
+      fbItems = [{ id: data.id, ts: new Date().toISOString(), name, day: B.day.date, text, link: '', ai: '', aiLink: '' }].concat(fbItems || []);
+      form.reset();
+      st.textContent = '남겼어요 · AI가 한 시간 안에 확인해요';
+      fillBlockSheet();
+      fillBlockBadges();
+      fillFeedback();
+    } catch (e) { st.textContent = '올리지 못했어요. 인터넷 연결을 확인해 주세요'; }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-blk]');
+    if (b && !e.target.closest('[data-wx-open]')) { e.preventDefault(); openBlockSheet(b.dataset.blk); }
+  });
+  wxSheet.addEventListener('click', (e) => {
+    const r = e.target.closest('[data-rx]');
+    if (r) { toggleRx(r.dataset.rx); return; }
+    // 창 안의 '그날 일정 보기' · '투표하러 가기' 도 그 자리로
+    const go = e.target.closest('[data-goto]');
+    if (go) {
+      pendingGoto = go.dataset.goto;
+      if (location.hash === go.getAttribute('href')) { e.preventDefault(); window.dispatchEvent(new HashChangeEvent('hashchange')); }
+    }
+  });
+  wxSheet.addEventListener('submit', (e) => { const f = e.target.closest('[data-blk-form]'); if (!f) return; e.preventDefault(); sendBlockComment(f); });
 
   /* ---------- 장소 찾아서 제안하기 (카카오 장소 검색 → 빈 시간에 제안 → AI 가 일정 · 투표에 반영) ---------- */
   const BASE = { lat: 33.300126, lon: 126.318729 }; // 서머셋
@@ -2578,6 +2726,7 @@
     fillFeedback();
     fillPolls();
     fillWeather();
+    fillBlockBadges();
   }
 
   /* ---------- 민석 공지: 구글 시트 '공지' 칸에 적으면 모든 화면 맨 위에 띠로 ---------- */
