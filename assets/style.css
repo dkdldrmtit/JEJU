@@ -1473,3 +1473,16 @@ html.calm .plan-panel.slide .day { animation: none; }
 .rc-polls li { display: flex; justify-content: space-between; gap: 10px; font-size: var(--fs-base); }
 .rc-polls li span { color: var(--muted); }
 .rc-polls li b { text-align: right; }
+
+/* 공지 올리기 (민석 폰에서만) */
+.me-notice { appearance: none; font: inherit; cursor: pointer; margin-left: auto; margin-right: 8px; padding: 7px 12px; border: 0; border-radius: 999px; background: #FFF4E5; color: var(--tangerine-ink); font-weight: 800; font-size: var(--fs-sm); box-shadow: inset 0 0 0 1.5px #F6C58E; }
+.nt-form { display: grid; gap: 12px; margin-top: 12px; }
+.nt-form textarea { min-height: 88px; }
+.nt-until { display: flex; gap: 8px; }
+.nt-until label { flex: 1; }
+.nt-until input { position: absolute; opacity: 0; pointer-events: none; }
+.nt-until span { display: block; text-align: center; padding: 10px 6px; border-radius: 14px; background: var(--sunken); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; }
+.nt-until input:checked + span { background: var(--ink); color: #fff; }
+.nt-until input:focus-visible + span { outline: 2px solid var(--sea); outline-offset: 2px; }
+.nt-btns { display: flex; gap: 8px; }
+.nt-btns .btn { flex: 1; }

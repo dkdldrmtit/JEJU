@@ -12,9 +12,9 @@
  *  - 사진은 스크립트 속성 PHOTO_KEY(가족 비밀번호)를 아는 사람만 보고 올릴 수 있어요.
  *  - hidden 칸에 아무 글자나 적으면 사이트에서 숨겨져요.
  * 시트 '공지' : A2 칸에 적은 글이 사이트 맨 위에 띠로 떠요 (B2 에 날짜를 적으면 그날까지만).
- *  - 이 시트는 민석만 고칠 수 있어서, 다른 사람이 공지를 띄울 수 없어요. 지우면 띠도 사라져요.
+ *  - 사이트의 '공지 올리기'로도 바뀌어요. 이때는 관리 열쇠(스크립트 속성 NOTICE_KEY, 없으면 AI_TOKEN)가 맞아야 해요.
  */
-const VERSION = 4;
+const VERSION = 5;
 const SHEET_NAME = '의견';
 const HEAD = ['id', 'ts', 'name', 'day', 'text', 'link', 'ai', 'aiLink', 'hidden'];
 const VOTE_SHEET = '투표';
@@ -155,6 +155,14 @@ function handle_(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
+    if (body.action === 'notice') {
+      const key = prop_('NOTICE_KEY') || prop_('AI_TOKEN');
+      if (!key || body.key !== key) return out_({ ok: false, error: 'unauthorized' });
+      const text = clean_(body.text, 200);
+      const until = /^\d{4}-\d{2}-\d{2}$/.test(String(body.until || '')) ? body.until : '';
+      sheetOf_(NOTICE_SHEET, NOTICE_HEAD).getRange(2, 1, 1, 2).setValues([[text, until]]);
+      return out_({ ok: true, notice: notice_() });
+    }
     const sh = sheet_();
     if (body.action === 'add') {
       if (body.website) return out_({ ok: true }); // 스팸 봇용 함정 칸 (사람은 안 보임)

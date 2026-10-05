@@ -2138,6 +2138,7 @@
       return `<div class="me-bar"><button type="button" class="me-name" data-who-open>누구세요? <b>고르기</b></button><button type="button" class="me-big${big ? ' on' : ''}" data-big aria-pressed="${big}" aria-label="큰 글씨">가<small>+</small></button></div>`;
     }
     return `<div class="me-bar"><button type="button" class="me-name" data-who-open aria-label="사람 바꾸기"><b>${esc(p.name)}</b>${p.name.length > 2 ? '' : '님'} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      ${isAdmin() ? '<button type="button" class="me-notice" data-notice-open>📢 공지</button>' : ''}
       <button type="button" class="me-big${big ? ' on' : ''}" data-big aria-pressed="${big}" aria-label="큰 글씨 ${big ? '끄기' : '켜기'}">가<small>${big ? '−' : '+'}</small></button></div>`;
   }
 
@@ -2301,6 +2302,69 @@
     if (!show) return;
     noticeEl.innerHTML = `<span class="nt-ic" aria-hidden="true">📢</span><p><b>민석 공지</b>${esc(n.text)}</p><button type="button" class="nt-x" data-notice-x aria-label="공지 닫기">✕</button>`;
   }
+  // 민석 폰에서만 '공지 올리기': 주소 끝에 ?admin=관리열쇠 를 붙여 한 번 열면 그 폰이 기억해요 (주소에서는 바로 지움)
+  const ADMIN_KEY = 'jeju2026.admin';
+  (() => {
+    const m = location.search.match(/[?&]admin=([^&#]+)/);
+    if (!m) return;
+    store.set(ADMIN_KEY, decodeURIComponent(m[1]));
+    const q = location.search.replace(/([?&])admin=[^&#]*&?/, '$1').replace(/[?&]$/, '');
+    history.replaceState(null, '', location.pathname + q + location.hash);
+  })();
+  function isAdmin() { return Boolean(store.get(ADMIN_KEY)); }
+  function openNoticeSheet() {
+    const n = notice || {};
+    const t0 = today();
+    const t1 = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1);
+    const opts = [[isoOf(t0), '오늘까지'], [isoOf(t1), '내일까지'], ['', '계속']];
+    const cur = n.text ? (n.until || '') : isoOf(t0);
+    wxSheet.innerHTML = `<div class="sheet-panel nt-panel" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="ws-head"><div><p class="ws-day">민석 폰에서만 보여요</p><p class="ws-main"><b>공지 올리기</b></p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
+      <form class="nt-form" data-notice-form>
+        <textarea name="t" class="fb-input" rows="3" maxlength="200" placeholder="예: 내일 아침 9시에 로비에서 만나요 · 우산 챙겨요">${esc(n.text || '')}</textarea>
+        <div class="nt-until">${opts.map(([v, l]) => `<label><input type="radio" name="u" value="${v}"${v === cur ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
+        <div class="nt-btns"><button type="submit" class="btn primary">올리기</button>${n.text ? '<button type="button" class="btn" data-notice-clear>공지 내리기</button>' : ''}</div>
+        <p class="fb-status" data-nt-status aria-live="polite"></p>
+      </form>
+    </div>`;
+    wxSheet.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+    const ta = wxSheet.querySelector('textarea');
+    if (ta) ta.focus({ preventScroll: true });
+  }
+  async function sendNotice(text, until) {
+    const st = wxSheet.querySelector('[data-nt-status]');
+    if (st) st.textContent = '올리는 중…';
+    try {
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'notice', key: store.get(ADMIN_KEY), text, until }) });
+      const data = await res.json();
+      if (!data.ok) {
+        if (st) st.textContent = data.error === 'unauthorized' ? '관리 열쇠가 맞지 않아요 (민석 폰에서 관리 주소로 다시 열어 주세요)' : data.error === 'unknown action' ? '구글 시트 코드를 새 버전으로 배포해 주세요' : '올리지 못했어요. 잠시 뒤 다시 해 주세요';
+        return;
+      }
+      notice = data.notice || null;
+      try { localStorage.removeItem(NOTICE_KEY); } catch (e) { /* 무시 */ }
+      fillNotice();
+      closeWxSheet();
+      toast(text ? '공지를 올렸어요 · 모두의 화면 맨 위에 떠요' : '공지를 내렸어요');
+    } catch (e) {
+      if (st) st.textContent = '인터넷 연결을 확인해 주세요';
+    }
+  }
+  wxSheet.addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-notice-form]');
+    if (!f) return;
+    e.preventDefault();
+    const fd = new FormData(f);
+    const text = String(fd.get('t') || '').trim();
+    if (!text) { wxSheet.querySelector('[data-nt-status]').textContent = '공지 내용을 적어 주세요'; return; }
+    sendNotice(text, String(fd.get('u') || ''));
+  });
+  wxSheet.addEventListener('click', (e) => { if (e.target.closest('[data-notice-clear]')) sendNotice('', ''); });
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-notice-open]')) openNoticeSheet(); });
+
   noticeEl.addEventListener('click', (e) => {
     if (!e.target.closest('[data-notice-x]')) return;
     const n = notice || T.notice;
