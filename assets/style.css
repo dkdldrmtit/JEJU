@@ -1546,3 +1546,54 @@ html.calm .plan-panel.slide .day { animation: none; }
 .hide-done .checklist li.is-done { display: none; }
 .hide-done .pk-sec.all-done .pk-alldone { display: block; }
 .hide-done .pk-sec.all-done .pk-note { display: none; }
+
+/* =====================================================================
+   장소 찾아서 제안하기
+   ===================================================================== */
+.place-cta {
+  appearance: none; font: inherit; cursor: pointer; width: 100%; text-align: left;
+  display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; padding: 14px 16px; border: 0; border-radius: 18px;
+  background: linear-gradient(135deg, #FFF1E2, #FFE3C8); color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px #F6C58E;
+}
+.voice .place-cta { margin: 10px 0 12px; }
+.place-cta > span:first-child { font-size: 1.4rem; }
+.place-cta b { display: block; font-size: var(--fs-base); }
+.place-cta small { color: var(--muted); font-size: var(--fs-sm); }
+.slot-btn.find { background: var(--ink); color: #fff; }
+.slot-btn.ghost { background: transparent; box-shadow: none; color: var(--muted); padding-inline: 8px; }
+.slot-sug { display: grid; gap: 6px; margin-top: 10px; }
+.slot-sug li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; border-radius: 12px; background: #fff; font-size: var(--fs-sm); }
+.slot-sug .ss-n { color: var(--muted); font-weight: 700; }
+.slot-sug b { flex: 1; min-width: 0; }
+.slot-sug a { font-weight: 800; font-size: .75rem; }
+.slot-sug em { font-style: normal; font-size: .72rem; font-weight: 800; color: var(--sea-ink); }
+
+.pl-panel { max-height: 88vh; display: flex; flex-direction: column; }
+.pl-body { overflow-y: auto; -webkit-overflow-scrolling: touch; margin-top: 12px; padding-bottom: 8px; }
+.pl-search input { font-size: 16px; }
+.pl-hint { margin-top: 8px; font-size: var(--fs-xs); color: var(--muted); }
+.pl-list { display: grid; gap: 8px; margin-top: 12px; }
+.pl-empty { padding: 14px; border-radius: 14px; background: var(--sunken); color: var(--muted); font-size: var(--fs-sm); }
+.pl-row { display: flex; align-items: stretch; gap: 6px; }
+.pl-pick {
+  appearance: none; font: inherit; cursor: pointer; flex: 1; min-width: 0; text-align: left;
+  display: grid; gap: 2px; padding: 12px 14px; border: 0; border-radius: 16px; background: var(--sunken); color: var(--ink);
+}
+.pl-pick:active { transform: scale(.99); background: #E9EDF0; }
+.pl-pick b { font-size: var(--fs-base); }
+.pl-cat { font-size: .74rem; font-weight: 700; color: var(--tangerine-ink); }
+.pl-addr { font-size: var(--fs-xs); color: var(--muted); }
+.pl-dist { font-size: var(--fs-xs); font-weight: 700; color: var(--sea-ink); }
+.pl-map { display: grid; place-items: center; padding: 0 12px; border-radius: 16px; background: var(--sunken); font-size: .78rem; font-weight: 800; text-decoration: none; }
+.pl-chosen { display: grid; gap: 2px; padding: 14px; border-radius: 16px; background: #FFF4E5; box-shadow: inset 0 0 0 1.5px #F6C58E; }
+.pl-chosen b { font-size: 1.05rem; }
+.pl-chosen span { font-size: var(--fs-sm); color: var(--muted); }
+.pl-chosen a { font-size: var(--fs-sm); font-weight: 800; }
+.pl-form { display: grid; gap: 10px; margin-top: 14px; }
+.pl-label { font-weight: 800; font-size: var(--fs-sm); }
+.pl-slots { display: grid; gap: 6px; }
+.pl-slots input { position: absolute; opacity: 0; pointer-events: none; }
+.pl-slots span { display: block; padding: 11px 14px; border-radius: 14px; background: var(--sunken); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; }
+.pl-slots input:checked + span { background: var(--ink); color: #fff; }
+.pl-slots input:focus-visible + span { outline: 2px solid var(--sea); outline-offset: 2px; }

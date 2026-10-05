@@ -128,6 +128,16 @@
     });
     return items;
   }
+  // 이 빈 시간에 들어온 제안 (📍 장소 제안 · 시간이 같은 의견)
+  function slotSuggestHTML(date, S) {
+    const list = (fbItems || []).filter((x) => x.day === date && String(x.text).includes(`${S.start}~${S.end}`));
+    if (!list.length) return '';
+    return `<ul class="slot-sug">${list.map((x) => {
+      const m = String(x.text).match(/^📍\s*([^·\n]+)/);
+      const what = m ? m[1].trim() : String(x.text).replace(/^\d+일 [\d:~]+ \([^)]*\):\s*/, '').slice(0, 40);
+      return `<li><span class="ss-n">${esc(x.name || '가족')}</span><b>${esc(what)}</b>${x.link ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">지도</a>` : ''}${x.ai ? '<em>AI 답 ✓</em>' : ''}</li>`;
+    }).join('')}</ul>`;
+  }
   function slotRowHTML(it, day) {
     const S = it.slot;
     const meal = S.kind === 'meal';
@@ -142,8 +152,10 @@
           ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
           <div class="slot-acts">
             ${poll ? `<a class="slot-btn vote" href="#ideas" data-goto="polls">${poll.kind === 'course' ? ICON.route : ICON.meal}<span>투표하러 가기</span></a>` : ''}
-            <button type="button" class="slot-btn" data-slot="${esc(day.date)}|${esc(S.start)}|${esc(S.end)}|${esc(S.label)}">＋ ${meal ? '먹고 싶은 곳' : '가고 싶은 곳'} 남기기</button>
+            <button type="button" class="slot-btn find" data-place-find="${esc(day.date)}|${esc(S.start)}|${esc(S.end)}|${esc(S.label)}|${esc(S.kind)}">🔍 ${meal ? '먹을 곳' : '갈 곳'} 찾아서 제안</button>
+            <button type="button" class="slot-btn ghost" data-slot="${esc(day.date)}|${esc(S.start)}|${esc(S.end)}|${esc(S.label)}">글로 남기기</button>
           </div>
+          ${slotSuggestHTML(day.date, S)}
         </div>
       </div>
     </li>`;
@@ -508,7 +520,7 @@
     if (!kakaoReady) {
       kakaoReady = new Promise((resolve) => {
         const sc = document.createElement('script');
-        sc.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(T.map.kakaoKey)}&autoload=false`;
+        sc.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(T.map.kakaoKey)}&autoload=false&libraries=services`;
         // 도메인 미등록 등으로 키가 거부되면 SDK 대신 오류 JSON 이 와서 kakao 가 안 생김 → OpenStreetMap 으로
         const fail = setTimeout(() => resolve(false), 20000);
         sc.onload = () => {
@@ -671,6 +683,7 @@
       <div class="h-row"><h2 class="h">가족 의견함</h2><a class="count link" href="#ideas">전체 보기</a></div>
       <div class="card voice">
         <p class="voice-lead">뭐든 남기면 <b>AI가 한 시간 안에</b> 답하거나 일정에 넣어요.</p>
+        <button type="button" class="place-cta" data-place-find=""><span aria-hidden="true">🔍</span><span><b>장소 찾아서 제안하기</b><small>가고 싶은 곳을 검색해서 골라요</small></span></button>
         <div class="fb" data-fb-day="home"></div>
       </div>
     </section>`;
@@ -813,6 +826,7 @@
       <section class="block">
         <h2 class="h">가족 의견</h2>
         <p class="lede">하고 싶은 거, 먹고 싶은 거 아무거나 남겨주세요. 링크도 붙일 수 있어요.</p>
+        <button type="button" class="place-cta" data-place-find=""><span aria-hidden="true">🔍</span><span><b>장소 찾아서 제안하기</b><small>검색해서 고르면 비어 있는 시간에 바로 제안돼요</small></span></button>
         <div class="card fb fb-all" data-fb-day="all"></div>
       </section>
       ${(T.ideaGroups || []).map((g) => `<section class="block">
@@ -1312,6 +1326,7 @@
     fillPolls();
     fillNotice();
     fillRecap();
+    if (currentTab() === 'plan') refreshPlanPanel();
     if (photosOn && photoKey()) loadPhotos();
     else fillAlbum();
   }
@@ -2400,6 +2415,162 @@
     if (st.phase !== 'during') return;
     const el = document.getElementById(`day-${st.iso}`);
     if (el) el.scrollIntoView({ block: 'start' });
+  }
+
+  /* ---------- 장소 찾아서 제안하기 (카카오 장소 검색 → 빈 시간에 제안 → AI 가 일정 · 투표에 반영) ---------- */
+  const BASE = { lat: 33.300126, lon: 126.318729 }; // 서머셋
+  let place = { ctx: null, results: [], pick: null, timer: null, seq: 0 };
+  const kmFrom = (lat, lon) => {
+    const R = 6371;
+    const dLat = ((lat - BASE.lat) * Math.PI) / 180;
+    const dLon = ((lon - BASE.lon) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((BASE.lat * Math.PI) / 180) * Math.cos((lat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  };
+  // 직선거리로 어림한 차 시간 (제주 국도 평균 40km/h, 굽은 길 1.3배)
+  const driveMin = (km) => Math.max(5, Math.round(((km * 1.3) / 40) * 60 / 5) * 5);
+  function allSlots() {
+    const out = [];
+    T.days.forEach((d) => daySlots(d).forEach((it) => { if (it.slot) out.push({ date: d.date, ...it.slot }); }));
+    return out;
+  }
+  const slotKey = (x) => `${x.date}|${x.start}|${x.end}|${x.label}|${x.kind || ''}`;
+  const slotName = (x) => `${dom(x.date)}일(${wd(x.date)}) ${x.start}~${x.end} ${String(x.label).replace(/\s*\(미정\)|\s*미정/g, '').trim()}`;
+  function openPlaceSheet(ctx) {
+    place = { ctx, results: [], pick: null, timer: null, seq: 0 };
+    wxSheet.innerHTML = `<div class="sheet-panel pl-panel" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="ws-head"><div><p class="ws-day">${ctx ? esc(slotName(ctx)) : '가고 싶은 곳 · 먹고 싶은 곳'}</p><p class="ws-main"><b>장소 찾아서 제안</b></p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
+      <div class="pl-body" data-pl-body></div>
+    </div>`;
+    wxSheet.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+    renderPlaceSearch();
+    loadKakao();
+  }
+  function renderPlaceSearch(q = '') {
+    const body = wxSheet.querySelector('[data-pl-body]');
+    if (!body) return;
+    body.innerHTML = `<div class="pl-search"><input type="search" class="fb-input" data-pl-q placeholder="예: 카멜리아힐, 흑돼지, 키즈카페" value="${esc(q)}" enterkeyhint="search" autocomplete="off"></div>
+      <p class="pl-hint">이름이나 '흑돼지 · 키즈카페'처럼 종류로 찾아도 돼요. 제주 안에서만 찾아요.</p>
+      <ul class="pl-list" data-pl-list></ul>`;
+    const inp = body.querySelector('[data-pl-q]');
+    inp.focus({ preventScroll: true });
+    if (q) runPlaceSearch(q);
+  }
+  async function runPlaceSearch(q) {
+    const list = wxSheet.querySelector('[data-pl-list]');
+    if (!list) return;
+    q = q.trim();
+    if (q.length < 2) { list.innerHTML = ''; return; }
+    const my = ++place.seq;
+    list.innerHTML = '<li class="pl-empty">찾는 중…</li>';
+    const ok = await loadKakao();
+    const K = window.kakao && window.kakao.maps;
+    if (!ok || !K || !K.services) {
+      list.innerHTML = `<li class="pl-empty">지금은 검색이 안 돼요. <a href="https://map.naver.com/p/search/${encodeURIComponent(`제주 ${q}`)}" target="_blank" rel="noopener">네이버 지도에서 찾기</a> 후 '글로 남기기'로 적어 주세요.</li>`;
+      return;
+    }
+    const ps = new K.services.Places();
+    const bounds = new K.LatLngBounds(new K.LatLng(JEJU_BOX[0][0], JEJU_BOX[0][1]), new K.LatLng(JEJU_BOX[1][0], JEJU_BOX[1][1]));
+    ps.keywordSearch(q, (data, status) => {
+      if (my !== place.seq) return; // 더 새 검색이 있으면 버림
+      if (status !== K.services.Status.OK || !data.length) { list.innerHTML = '<li class="pl-empty">제주에서 찾는 곳이 없어요. 다른 이름으로 찾아 보세요.</li>'; return; }
+      // 카카오 정확도 순서는 그대로 두고, 이름이 딱 맞는 곳을 맨 위로 · 주차장은 찾을 때만
+      const nq = norm(q);
+      place.results = data
+        .filter((d) => d.category_group_code !== 'PK6' || /주차/.test(q))
+        .map((d, k) => {
+          const km = kmFrom(Number(d.y), Number(d.x));
+          return { id: d.id, name: d.place_name, cat: String(d.category_name || '').split(' > ').pop(), addr: (d.road_address_name || d.address_name || '').replace('제주특별자치도 ', ''), url: d.place_url, lat: Number(d.y), lon: Number(d.x), km, rank: norm(d.place_name) === nq ? -1 : k };
+        })
+        .sort((a, b) => a.rank - b.rank);
+      if (!place.results.length) { list.innerHTML = '<li class="pl-empty">제주에서 찾는 곳이 없어요. 다른 이름으로 찾아 보세요.</li>'; return; }
+      list.innerHTML = place.results.map((r, k) => `<li class="pl-row">
+        <button type="button" class="pl-pick" data-pl-pick="${k}">
+          <b>${esc(r.name)}</b><span class="pl-cat">${esc(r.cat)}</span>
+          <span class="pl-addr">${esc(r.addr)}</span>
+          <span class="pl-dist">서머셋에서 차로 약 ${driveMin(r.km)}분 · ${r.km.toFixed(1)}km</span>
+        </button>
+        <a class="pl-map" href="${esc(r.url)}" target="_blank" rel="noopener">지도</a>
+      </li>`).join('');
+    }, { bounds, size: 15, location: new K.LatLng(BASE.lat, BASE.lon) });
+  }
+  function renderPlaceConfirm() {
+    const body = wxSheet.querySelector('[data-pl-body]');
+    const r = place.pick;
+    if (!body || !r) return;
+    const slots = allSlots().filter((x) => today() <= toDate(x.date));
+    const cur = place.ctx ? slotKey(place.ctx) : '';
+    body.innerHTML = `<div class="pl-chosen"><b>📍 ${esc(r.name)}</b><span>${esc(r.cat)} · 서머셋에서 차로 약 ${driveMin(r.km)}분</span><a href="${esc(r.url)}" target="_blank" rel="noopener">지도 보기</a></div>
+      <form class="pl-form" data-pl-form>
+        <p class="pl-label">언제 갈까요?</p>
+        <div class="pl-slots">${slots.map((x) => `<label><input type="radio" name="slot" value="${esc(slotKey(x))}"${slotKey(x) === cur ? ' checked' : ''}><span>${esc(slotName(x))}</span></label>`).join('')}
+          <label><input type="radio" name="slot" value=""${cur ? '' : ' checked'}><span>아무 때나 좋아요</span></label></div>
+        <p class="pl-label">한마디 (선택)</p>
+        <input name="memo" class="fb-input" maxlength="120" placeholder="예: 동백 예쁘대요, 유모차 되는지 궁금해요">
+        <div class="nt-btns"><button type="submit" class="btn primary">제안 올리기</button><button type="button" class="btn" data-pl-back>다시 찾기</button></div>
+        <p class="fb-status" data-pl-status aria-live="polite"></p>
+      </form>`;
+  }
+  async function submitPlace(form) {
+    const r = place.pick;
+    const fd = new FormData(form);
+    const sk = String(fd.get('slot') || '');
+    const memo = String(fd.get('memo') || '').trim();
+    const [date, start, end, label] = sk ? sk.split('|') : ['', '', '', ''];
+    const when = sk ? `${dom(date)}일 ${start}~${end} (${String(label).replace(/\s*\(미정\)|\s*미정/g, '').trim()})에 가고 싶어요` : '언제든 가 보고 싶어요';
+    const text = `📍 ${r.name} · ${when} · ${r.cat} · 서머셋에서 차로 약 ${driveMin(r.km)}분${memo ? ` · ${memo}` : ''}`;
+    const st = wxSheet.querySelector('[data-pl-status]');
+    st.textContent = '올리는 중…';
+    try {
+      const name = savedName() || '가족';
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'add', name, day: date, text, link: r.url, website: '' }) });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'fail');
+      fbItems = [{ id: data.id, ts: new Date().toISOString(), name, day: date, text, link: r.url, ai: '', aiLink: '' }].concat(fbItems || []);
+      closeWxSheet();
+      fillFeedback();
+      refreshPlanPanel();
+      toast('제안했어요 · AI가 한 시간 안에 확인하고 일정이나 투표에 넣어요');
+    } catch (e) {
+      st.textContent = '올리지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요';
+    }
+  }
+  wxSheet.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-pl-q]')) return;
+    clearTimeout(place.timer);
+    const q = e.target.value;
+    place.timer = setTimeout(() => runPlaceSearch(q), 350);
+  });
+  wxSheet.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-pl-q]')) { e.preventDefault(); clearTimeout(place.timer); runPlaceSearch(e.target.value); } });
+  wxSheet.addEventListener('click', (e) => {
+    const pk = e.target.closest('[data-pl-pick]');
+    if (pk) { place.pick = place.results[Number(pk.dataset.plPick)]; renderPlaceConfirm(); return; }
+    if (e.target.closest('[data-pl-back]')) { renderPlaceSearch(place.pick ? '' : ''); }
+  });
+  wxSheet.addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-pl-form]');
+    if (!f) return;
+    e.preventDefault();
+    submitPlace(f);
+  });
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-place-find]');
+    if (!b) return;
+    const v = b.dataset.placeFind;
+    if (!v) { openPlaceSheet(null); return; }
+    const [date, start, end, label, kind] = v.split('|');
+    openPlaceSheet({ date, start, end, label, kind });
+  });
+  function refreshPlanPanel() {
+    const panel = view.querySelector('[data-plan-panel]');
+    if (!panel || planDay == null) return;
+    panel.innerHTML = planPanelHTML(planDay, tripState());
+    fillFeedback();
+    fillPolls();
+    fillWeather();
   }
 
   /* ---------- 민석 공지: 구글 시트 '공지' 칸에 적으면 모든 화면 맨 위에 띠로 ---------- */
