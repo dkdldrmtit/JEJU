@@ -1346,3 +1346,12 @@ html.big .inv-bubble { white-space: normal; max-width: 140px; text-align: center
 html.big .tpeek img { max-height: 104px; }
 .ck-yay img { max-height: 92px; object-fit: contain; object-position: 50% 100%; }
 .who-taeo { max-height: 120px; object-fit: contain; }
+
+/* 인터넷이 끊겼을 때 위에 뜨는 띠 */
+.offline-bar {
+  position: fixed; z-index: 60; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translate(-50%, -140%);
+  margin: 0; padding: 8px 14px; border-radius: 999px; max-width: calc(100vw - 32px);
+  background: #2B3438; color: #fff; font-size: var(--fs-sm); font-weight: 700; text-align: center;
+  box-shadow: 0 8px 20px rgb(0 0 0 / .18); transition: transform .3s var(--ease); pointer-events: none;
+}
+.offline-bar.show { transform: translate(-50%, 0); }

@@ -1097,11 +1097,20 @@
     view.querySelectorAll('.fb[data-fb-day]').forEach((el) => { el.innerHTML = fbBlockHTML(el.dataset.fbDay); });
   }
 
+  const FB_CACHE = 'jeju2026.fbcache';
   async function loadFeedback() {
     if (!FB.endpoint) return;
     try {
-      const res = await fetch(`${FB.endpoint}?t=${Date.now()}`);
-      const data = await res.json();
+      let data;
+      try {
+        const res = await fetch(`${FB.endpoint}?t=${Date.now()}`);
+        data = await res.json();
+        try { localStorage.setItem(FB_CACHE, JSON.stringify(data)); } catch (e) { /* 저장 공간 부족: 무시 */ }
+      } catch (e) {
+        // 인터넷이 안 되면 마지막으로 받아 둔 의견·투표를 보여줌
+        data = JSON.parse(localStorage.getItem(FB_CACHE) || 'null');
+        if (!data) throw e;
+      }
       fbItems = (data.items || []).map((it) => {
         // 구글 시트가 'YYYY-MM-DD' 를 날짜로 바꿔서 돌려주는 경우가 있어 다시 날짜 글자로
         if (it.day && !/^\d{4}-\d{2}-\d{2}$/.test(it.day)) { const d = new Date(it.day); it.day = Number.isNaN(d.getTime()) ? '' : isoOf(d); }
@@ -1698,6 +1707,7 @@
 
   /* 4. 가족 사진첩 (구글 드라이브에 저장 · 가족 비밀번호가 있어야 보고 올림) */
   const PKEY = 'jeju2026.photokey';
+  const PH_CACHE = 'jeju2026.phcache';
   let photos = null;
   let photoErr = '';
   const photoKey = () => { try { return localStorage.getItem(PKEY) || ''; } catch (e) { return ''; } };
@@ -1715,8 +1725,15 @@
     const key = photoKey();
     if (!FB.endpoint || !key) { fillAlbum(); return; }
     try {
-      const res = await fetch(`${FB.endpoint}?type=photos&key=${encodeURIComponent(key)}&t=${Date.now()}`);
-      const data = await res.json();
+      let data;
+      try {
+        const res = await fetch(`${FB.endpoint}?type=photos&key=${encodeURIComponent(key)}&t=${Date.now()}`);
+        data = await res.json();
+        if (data.ok) { try { localStorage.setItem(PH_CACHE, JSON.stringify(data)); } catch (e) { /* 무시 */ } }
+      } catch (e) {
+        data = JSON.parse(localStorage.getItem(PH_CACHE) || 'null');
+        if (!data) throw e;
+      }
       if (data.ok) { photos = data.photos || []; photoErr = ''; } else {
         photoErr = data.error || 'fail';
         if (photoErr === 'key') { try { localStorage.removeItem(PKEY); } catch (e) { /* 무시 */ } }
@@ -2096,6 +2113,25 @@
     if (st.phase !== 'during') return;
     const el = document.getElementById(`day-${st.iso}`);
     if (el) el.scrollIntoView({ block: 'start' });
+  }
+
+  /* ---------- 인터넷이 끊겨도 열리게 (sw.js) ---------- */
+  const offBar = document.createElement('p');
+  offBar.className = 'offline-bar';
+  offBar.setAttribute('role', 'status');
+  offBar.textContent = '인터넷이 안 돼요 · 저장된 내용을 보여줘요';
+  document.body.appendChild(offBar);
+  const syncOnline = () => {
+    const off = navigator.onLine === false;
+    offBar.classList.toggle('show', off);
+    if (!off && offBar.dataset.was === '1') { loadFeedback(); loadWeather(); }
+    offBar.dataset.was = off ? '1' : '0';
+  };
+  window.addEventListener('online', syncOnline);
+  window.addEventListener('offline', syncOnline);
+  syncOnline();
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { /* 지원 안 하는 브라우저: 그냥 온라인으로 */ }); });
   }
 
   render();
