@@ -4,7 +4,7 @@
  * - 사진·아이콘·글꼴: 저장해 둔 것 먼저 (빠름) → 뒤에서 새로 받아 둠
  * - 의견·투표·지도처럼 실시간인 것은 건드리지 않음 (사이트가 따로 마지막 내용을 기억해 둠)
  */
-const VERSION = 'dcdaf078ca';
+const VERSION = '94fd333b11';
 const CORE_CACHE = `jeju-core-${VERSION}`;
 const MEDIA_CACHE = 'jeju-media-v1';
 const PHOTO_CACHE = 'jeju-family-photos-v1'; // 가족 사진첩 미리보기 (이 폰에만)
@@ -40,9 +40,14 @@ const MEDIA = [
   "assets/photos/taeo/bonnet.webp",
   "assets/photos/taeo/hero-ball.webp",
   "assets/photos/taeo/hero-banana.webp",
+  "assets/photos/taeo/hero-bottle.webp",
   "assets/photos/taeo/hero-close.webp",
+  "assets/photos/taeo/hero-crawl.webp",
+  "assets/photos/taeo/hero-dad.webp",
+  "assets/photos/taeo/hero-feet.webp",
   "assets/photos/taeo/hero-food.webp",
   "assets/photos/taeo/hero-hanbok.webp",
+  "assets/photos/taeo/hero-hat.webp",
   "assets/photos/taeo/hero-hold.webp",
   "assets/photos/taeo/hero-kitty.webp",
   "assets/photos/taeo/hero-knot.webp",
