@@ -44,7 +44,6 @@ window.TRIP = {
       { photo: 'assets/photos/taeo/hero-hold.webp', w: 600, h: 551, alt: '번쩍 안겨서 활짝 웃는 태오', bubbles: ['비행기 타고 슝~', '하늘 높이!', '제주에서 만나요!'] },
       { photo: 'assets/photos/taeo/hero-laugh.webp', w: 591, h: 747, alt: '눈 감고 깔깔 웃는 태오', bubbles: ['꺄하하! 너무 좋아요', '제주 가면 이렇게 웃을래요', '빨리 가요!'] },
       { photo: 'assets/photos/taeo/hero-close.webp', w: 600, h: 687, alt: '가까이서 빤히 쳐다보는 태오', bubbles: ['가까이 와 봐요', '뭐 하고 있어요?', '나 보여요?'] },
-      { photo: 'assets/photos/taeo/hero-smile.webp', w: 600, h: 814, alt: '머리 삐죽 세우고 웃는 태오', bubbles: ['헤헤, 좋아요!', '머리 멋지죠?', '같이 가요!'] },
       { photo: 'assets/photos/taeo/hero-food.webp', w: 600, h: 893, alt: '이유식 앞에서 턱받이를 문 태오', bubbles: ['이유식 다 먹었어요', '제주에서도 냠냠', '맛있는 거 먹어요!'] },
       { photo: 'assets/photos/taeo/hero-hanbok.webp', w: 600, h: 571, alt: '한복 입고 볼을 꾹 눌린 태오', bubbles: ['볼 꾹! 하지 마요', '한복 입었어요', '안녕하세요!'] },
       { photo: 'assets/photos/taeo/hero-knot.webp', w: 600, h: 648, alt: '꼭지 모자 쓰고 주먹을 문 태오', bubbles: ['냠, 주먹 맛있어요', '모자 귀엽죠?', '음… 제주 언제 가요?'] },
@@ -64,7 +63,6 @@ window.TRIP = {
     plan: [
       { img: 'bonnet', w: 280, h: 228, alt: '갈색 모자 쓰고 쪽쪽이 문 태오', says: ['어디 가요?', '쪽쪽… 출발!', '나도 갈래요'] },
       { img: 'hero-crawl', w: 600, h: 689, alt: '엎드려서 신나게 웃는 태오', says: ['어디 가요?', '나도 갈래요!', '빨리 가요!'] },
-      { img: 'hero-smile', w: 600, h: 814, alt: '머리 삐죽 세우고 웃는 태오', says: ['헤헤, 일정 봤어요?', '나도 갈래요', '머리 멋지죠?'] },
     ],
     ideas: [
       { img: 'banana', w: 280, h: 288, alt: '바나나 치발기 문 태오', says: ['맛있는 거!', '냠냠 투표!', '바나나 좋아'] },
