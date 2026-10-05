@@ -46,7 +46,6 @@ window.TRIP = {
       { photo: 'assets/photos/taeo/hero-food.webp', w: 600, h: 893, alt: '이유식 앞에서 턱받이를 문 태오', bubbles: ['이유식 다 먹었어요', '제주에서도 냠냠', '맛있는 거 먹어요!'] },
       { photo: 'assets/photos/taeo/hero-hanbok.webp', w: 600, h: 571, alt: '한복 입고 볼을 꾹 눌린 태오', bubbles: ['볼 꾹! 하지 마요', '한복 입었어요', '안녕하세요!'] },
       { photo: 'assets/photos/taeo/hero-knot.webp', w: 600, h: 648, alt: '꼭지 모자 쓰고 주먹을 문 태오', bubbles: ['냠, 주먹 맛있어요', '모자 귀엽죠?', '음… 제주 언제 가요?'] },
-      { photo: 'assets/photos/taeo/hero-bw.webp', w: 600, h: 636, alt: '흑백 사진 속 누워서 쳐다보는 태오', bubbles: ['아기 때 사진이에요', '분위기 있죠?', '지금은 더 컸어요!'] },
       { photo: 'assets/photos/taeo/hero-peek.webp', w: 534, h: 607, alt: '고개를 돌려 쳐다보는 태오', bubbles: ['누구 왔어요?', '할머니?', '나 보러 왔어요?'] },
     ],
     // 밤(21시~6시)에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오로 바뀜
@@ -71,7 +70,6 @@ window.TRIP = {
     info: [
       { img: 'paci', w: 280, h: 259, alt: '니트 모자 쓰고 쪽쪽이 문 태오', says: ['다 여기 있어요', '쪽쪽…', '궁금하면 봐요'] },
       { img: 'hero-close', w: 600, h: 687, alt: '가까이서 빤히 쳐다보는 태오', says: ['궁금한 거 있어요?', '여기 다 있어요', '빤히…'] },
-      { img: 'hero-bw', w: 600, h: 636, alt: '흑백 사진 속 누워서 쳐다보는 태오', says: ['잘 읽어 봐요', '여기 다 있어요', '음…'] },
     ],
     album: [
       { img: 'ball', w: 280, h: 426, alt: '공을 잡으며 활짝 웃는 태오', says: ['찰칵!', '나도 찍어 줘요', '사진 보여 줘요'] },
