@@ -11,8 +11,10 @@
  *  - 사진 파일은 내 구글 드라이브 '제주여행 사진첩' 폴더에 저장돼요 (링크가 있는 사람만 보기).
  *  - 사진은 스크립트 속성 PHOTO_KEY(가족 비밀번호)를 아는 사람만 보고 올릴 수 있어요.
  *  - hidden 칸에 아무 글자나 적으면 사이트에서 숨겨져요.
+ * 시트 '공지' : A2 칸에 적은 글이 사이트 맨 위에 띠로 떠요 (B2 에 날짜를 적으면 그날까지만).
+ *  - 이 시트는 민석만 고칠 수 있어서, 다른 사람이 공지를 띄울 수 없어요. 지우면 띠도 사라져요.
  */
-const VERSION = 3;
+const VERSION = 4;
 const SHEET_NAME = '의견';
 const HEAD = ['id', 'ts', 'name', 'day', 'text', 'link', 'ai', 'aiLink', 'hidden'];
 const VOTE_SHEET = '투표';
@@ -20,6 +22,16 @@ const VOTE_HEAD = ['poll', 'option', 'name', 'ts'];
 const PHOTO_SHEET = '사진';
 const PHOTO_HEAD = ['id', 'ts', 'name', 'day', 'fileId', 'w', 'h', 'hidden'];
 const PHOTO_FOLDER = '제주여행 사진첩';
+const NOTICE_SHEET = '공지';
+const NOTICE_HEAD = ['공지 (A2 칸에 적으면 사이트 맨 위에 떠요)', '언제까지 (예: 2026-10-14, 비우면 계속)'];
+
+function notice_() {
+  const sh = sheetOf_(NOTICE_SHEET, NOTICE_HEAD);
+  const v = sh.getRange(2, 1, 1, 2).getValues()[0];
+  const text = String(v[0] || '').trim().slice(0, 200);
+  if (!text) return null;
+  return { text, until: day_(v[1]) };
+}
 
 function sheetOf_(name, head) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -99,7 +111,7 @@ function doGet(e) {
       name: String(r[2]), day: day_(r[3]), text: String(r[4]).replace(/^'/, ''), link: String(r[5]),
       ai: String(r[6]).replace(/^'/, ''), aiLink: String(r[7]),
     }));
-  return out_({ v: VERSION, items, votes: votes_(), photosOn: Boolean(prop_('PHOTO_KEY')) });
+  return out_({ v: VERSION, items, votes: votes_(), photosOn: Boolean(prop_('PHOTO_KEY')), notice: notice_() });
 }
 
 function doPost(e) {

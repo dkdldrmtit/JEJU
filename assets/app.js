@@ -8,7 +8,7 @@
   const foot = document.getElementById('foot');
   const tabLinks = document.querySelectorAll('.tabbar a');
 
-  const TABS = ['home', 'plan', 'ideas', 'album', 'info', 'pack', 'guide']; // pack · guide 는 탭바 없이 링크로만
+  const TABS = ['home', 'plan', 'ideas', 'album', 'info', 'pack', 'guide', 'recap']; // pack · guide · recap 은 탭바 없이 링크로만
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   const STATUS = { ok: '확정', plan: '예정', tbd: '미정', idea: '후보' };
   const PACK_KEY = 'jeju2026.packing.v1';
@@ -660,7 +660,7 @@
   function renderHome() {
     const st = tripState();
     // 홈은 꼭 필요한 것만: 초대장 · 내 일정 · 바로가기 · 챙길 것 · 시간표 · 의견함 (나머지는 정보 탭으로)
-    return meBarHTML() + heroHTML(st) + (me() ? myCardHTML(st) : nowHTML(st)) + quickHTML(st) + checkHTML(st) + plannerHTML(st) + homeVoiceHTML();
+    return meBarHTML() + heroHTML(st) + recapCardHTML(st) + (me() ? myCardHTML(st) : nowHTML(st)) + todayPhotoHTML(st) + quickHTML(st) + checkHTML(st) + plannerHTML(st) + homeVoiceHTML();
   }
 
   /* ---------- 일정 ---------- */
@@ -1033,8 +1033,8 @@
 
   async function shareInvite(kind) {
     const base = T.share;
-    const S = kind === 'guide' && T.guideB ? { ...base, ...T.guideB.share } : base;
-    const url = ((T.site && T.site.url) || location.href.split('#')[0]) + (kind === 'guide' ? '#guide' : '');
+    const S = kind === 'guide' && T.guideB ? { ...base, ...T.guideB.share } : kind === 'recap' && T.recap ? { ...base, ...T.recap.share } : base;
+    const url = ((T.site && T.site.url) || location.href.split('#')[0]) + (kind === 'guide' ? '#guide' : kind === 'recap' ? '#recap' : '');
     const link = { mobileWebUrl: url, webUrl: url };
     if (kakaoShareReady()) {
       try {
@@ -1187,6 +1187,7 @@
         return it;
       }).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
       backendV = data.v || 1;
+      notice = data.notice || null;
       if (data.votes) votes = data.votes;
       photosOn = Boolean(data.photosOn);
     } catch (e) {
@@ -1194,6 +1195,8 @@
     }
     fillFeedback();
     fillPolls();
+    fillNotice();
+    fillRecap();
     if (photosOn && photoKey()) loadPhotos();
     else fillAlbum();
   }
@@ -1287,7 +1290,7 @@
   topbar.className = 'topbar';
   topbar.setAttribute('aria-hidden', 'true');
   document.body.appendChild(topbar);
-  const TAB_TITLE = { home: T.shortTitle, plan: '일정', ideas: '가볼 곳 · 먹을 곳', pack: '준비물', info: '정보', album: '가족 사진첩', guide: '후발대 안내' };
+  const TAB_TITLE = { home: T.shortTitle, plan: '일정', ideas: '가볼 곳 · 먹을 곳', pack: '준비물', info: '정보', album: '가족 사진첩', guide: '후발대 안내', recap: '우리 제주 여행' };
   function updateTopbar() {
     const st = tripState();
     const right = st.phase === 'before' ? `D-${st.dday}` : st.phase === 'during' ? `${st.index + 1}일차` : '';
@@ -1833,6 +1836,103 @@
   }
   function fillAlbum() {
     view.querySelectorAll('[data-album]').forEach((el) => { el.innerHTML = albumBodyHTML(el.dataset.album === 'home' ? 6 : 0); });
+    fillTodayPhoto();
+    fillRecap();
+  }
+
+  /* ---------- 오늘의 한 장 (여행 중 홈) ---------- */
+  function todayPhotoHTML(st) {
+    if (st.phase !== 'during' || !FB.endpoint) return '';
+    return '<section class="block" data-today-photo hidden></section>';
+  }
+  function fillTodayPhoto() {
+    const el = view.querySelector('[data-today-photo]');
+    if (!el) return;
+    const st = tripState();
+    const card = (txt) => `<a class="card tph-lock" href="#album"><span class="tph-ic" aria-hidden="true">📷</span><span><b>오늘의 한 장</b>${esc(txt)}</span></a>`;
+    if (!photosOn) { el.hidden = true; return; }
+    if (!photoKey()) { el.hidden = false; el.innerHTML = card('가족 비밀번호를 넣으면 오늘 올라온 사진이 여기 떠요'); return; }
+    if (!photos) { el.hidden = true; return; }
+    el.hidden = false;
+    if (!photos.length) { el.innerHTML = card('오늘 첫 사진을 올려 주세요!'); return; }
+    const todays = photos.filter((p) => p.day === st.iso);
+    const ph = todays[0] || photos[0];
+    const who = ph.name || '가족';
+    el.innerHTML = `<div class="h-row"><h2 class="h">${todays.length ? '오늘의 한 장' : '가장 최근 사진'}</h2><a class="count link" href="#album">${todays.length ? `오늘 ${todays.length}장 · ` : ''}사진첩</a></div>
+      <button type="button" class="card tph" data-ph="${esc(ph.id)}"><img src="${esc(thumb(ph.fileId, 900))}" data-alt="${esc(thumbAlt(ph.fileId, 900))}" alt="${esc(`${who}이 올린 사진`)}" referrerpolicy="no-referrer" loading="lazy"><span class="tph-cap">${esc(who)}${ph.day ? ` · ${esc(mdw(ph.day))}` : ''}</span></button>`;
+  }
+
+  /* ---------- 우리 제주 여행 (추억 모아보기) ---------- */
+  function recapCardHTML(st) {
+    if (st.phase !== 'after') return '';
+    return `<section class="block"><a class="card recap-card" href="#recap">
+      <span><b>우리 제주 여행 추억 모아보기</b><small>날짜별 사진 · 투표로 간 곳 · 가족 의견</small></span><span class="rc-go" aria-hidden="true">→</span>
+    </a></section>`;
+  }
+  // 투표 1등 (마감 처리된 게 있으면 그걸, 아니면 지금 표가 제일 많은 곳)
+  function pollWinner(p) {
+    const v = (votes || {})[p.id] || {};
+    const count = (id) => (v[id] || []).length;
+    let best = null;
+    if (p.decided && p.decided !== 'none') best = p.options.find((o) => o.id === p.decided) || null;
+    if (!best) {
+      const sorted = p.options.slice().sort((a, b) => count(b.id) - count(a.id));
+      if (sorted[0] && count(sorted[0].id) > 0 && (!sorted[1] || count(sorted[0].id) > count(sorted[1].id))) best = sorted[0];
+    }
+    return best ? { name: best.name, n: count(best.id) } : null;
+  }
+  function renderRecap() {
+    const st = tripState();
+    const days = T.days.map((d, i) => {
+      const hl = (d.items || []).filter((it) => it.status !== 'tbd').slice(0, 5);
+      return `<section class="block rc-day" style="--dc:var(--d${i + 1})">
+        <p class="dx-date"><b>${md(d.date)}</b> ${wd(d.date)}요일 <span class="dx-n">DAY ${i + 1}</span></p>
+        <h2 class="rc-title">${esc(d.title)}</h2>
+        <div class="card rc-card">
+          <ul class="rc-list">${hl.map((it) => `<li><span>${esc(it.time || it.when || '')}</span>${esc(it.title)}</li>`).join('')}</ul>
+          <div class="rc-photos" data-recap-photos="${d.date}"></div>
+          <div class="rc-voices" data-recap-voices="${d.date}"></div>
+        </div>
+      </section>`;
+    }).join('');
+    return `<section class="block">
+        <a class="back-link" href="#home">← 홈</a>
+        ${peekHTML('recap')}
+        <p class="page-kicker">${md(T.start)}(${wd(T.start)}) – ${md(T.end)}(${wd(T.end)}) · 일곱 식구</p>
+        <h1 class="page-title">우리 제주 여행</h1>
+        <p class="lede">${st.phase === 'after' ? '6일 동안의 추억을 날짜별로 모았어요.' : '여행이 끝나면 날짜별 사진과 추억이 여기 모여요. 지금은 미리보기예요.'}</p>
+        <button type="button" class="kakao-share small" data-share="recap">${ICON.talk}<span>추억 페이지 카톡으로 보내기</span></button>
+      </section>
+      <section class="block"><div class="rc-stats" data-recap-stats></div></section>
+      ${days}
+      <section class="block"><h2 class="h">가족 투표로 정한 곳</h2><div class="card"><ul class="rc-polls" data-recap-polls></ul></div></section>`;
+  }
+  function fillRecap() {
+    if (currentTab() !== 'recap') return;
+    const items = fbItems || [];
+    const list = photos || [];
+    const stats = view.querySelector('[data-recap-stats]');
+    if (stats) {
+      const nVotes = Object.values(votes || {}).reduce((a, p) => a + Object.values(p).reduce((b, arr) => b + arr.length, 0), 0);
+      const cell = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
+      stats.innerHTML = cell(T.days.length, '일') + cell(photoKey() && photos ? list.length : '🔒', '사진') + cell(items.length, '의견') + cell(nVotes, '표')
+        + (photosOn && !photoKey() ? '<a class="rc-lock" href="#album">가족 비밀번호를 넣으면 날짜별 사진도 보여요 →</a>' : '');
+    }
+    view.querySelectorAll('[data-recap-photos]').forEach((el) => {
+      const arr = list.filter((p) => p.day === el.dataset.recapPhotos);
+      if (!arr.length) { el.innerHTML = ''; return; }
+      const more = arr.length - 6;
+      el.innerHTML = `<div class="ph-grid">${arr.slice(0, 6).map((ph, k) => `<button type="button" class="ph" data-ph="${esc(ph.id)}"><img src="${esc(thumb(ph.fileId, 480))}" data-alt="${esc(thumbAlt(ph.fileId, 480))}" alt="${esc(`${ph.name || '가족'}이 올린 사진`)}" loading="lazy" referrerpolicy="no-referrer">${k === 5 && more > 0 ? `<span class="ph-more">+${more}</span>` : ''}</button>`).join('')}</div>`;
+    });
+    view.querySelectorAll('[data-recap-voices]').forEach((el) => {
+      const arr = items.filter((x) => x.day === el.dataset.recapVoices).slice(0, 2);
+      el.innerHTML = arr.map((x) => `<p class="rc-voice"><b>${esc(x.name || '가족')}</b>${esc(x.text)}</p>`).join('');
+    });
+    const pl = view.querySelector('[data-recap-polls]');
+    if (pl) {
+      const rows = (T.polls || []).map((p) => { const w = pollWinner(p); return `<li><span>${esc(p.short || p.title)}</span><b>${w ? `${esc(w.name)}${w.n ? ` · ${w.n}표` : ''}` : '아직 정하는 중'}</b></li>`; });
+      pl.innerHTML = rows.join('') || '<li><span>투표가 없었어요</span></li>';
+    }
   }
   function homeAlbumHTML() {
     return `<section class="block"><div class="h-row"><h2 class="h">가족 사진첩</h2><a class="count link" href="#album">전체 보기</a></div><div class="card album" data-album="home"></div></section>`;
@@ -1842,6 +1942,7 @@
         ${peekHTML('album')}
         <h1 class="page-title">가족 사진첩</h1>
         <p class="lede">여행 중에 찍은 사진을 같이 모아요. 올린 사진은 민석 구글 드라이브에 저장되고, 가족 비밀번호를 아는 사람만 볼 수 있어요.</p>
+        ${tripState().phase !== 'before' ? '<a class="btn-link" href="#recap">날짜별 추억 페이지 보기</a>' : ''}
       </section>
       <section class="block"><div class="card album" data-album="all"></div></section>`;
   }
@@ -2139,7 +2240,7 @@
   }
 
   /* ---------- 탭 전환 ---------- */
-  const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo, album: renderAlbum, guide: renderGuide };
+  const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo, album: renderAlbum, guide: renderGuide, recap: renderRecap };
   const currentTab = () => {
     const h = location.hash.replace('#', '');
     return TABS.includes(h) ? h : 'home';
@@ -2148,7 +2249,7 @@
   function render() {
     const tab = currentTab();
     view.innerHTML = RENDER[tab]();
-    const lit = { pack: 'info', guide: 'home' }[tab] || tab; // 탭바에 없는 페이지는 들어온 탭에 불을 켬
+    const lit = { pack: 'info', guide: 'home', recap: 'home' }[tab] || tab; // 탭바에 없는 페이지는 들어온 탭에 불을 켬
     tabLinks.forEach((a) => {
       if (a.dataset.tab === lit) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -2185,6 +2286,28 @@
     if (el) el.scrollIntoView({ block: 'start' });
   }
 
+  /* ---------- 민석 공지: 구글 시트 '공지' 칸에 적으면 모든 화면 맨 위에 띠로 ---------- */
+  let notice = null;
+  const NOTICE_KEY = 'jeju2026.noticeSeen';
+  const noticeEl = document.createElement('div');
+  noticeEl.className = 'notice';
+  noticeEl.hidden = true;
+  document.querySelector('.shell').prepend(noticeEl);
+  function fillNotice() {
+    const n = notice || T.notice || null;
+    const t = isoOf(today());
+    const show = n && n.text && (!n.until || t <= n.until) && store.get(NOTICE_KEY) !== n.text;
+    noticeEl.hidden = !show;
+    if (!show) return;
+    noticeEl.innerHTML = `<span class="nt-ic" aria-hidden="true">📢</span><p><b>민석 공지</b>${esc(n.text)}</p><button type="button" class="nt-x" data-notice-x aria-label="공지 닫기">✕</button>`;
+  }
+  noticeEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-notice-x]')) return;
+    const n = notice || T.notice;
+    if (n) store.set(NOTICE_KEY, n.text);
+    noticeEl.hidden = true;
+  });
+
   /* ---------- 인터넷이 끊겨도 열리게 (sw.js) ---------- */
   const offBar = document.createElement('p');
   offBar.className = 'offline-bar';
@@ -2205,6 +2328,7 @@
   }
 
   render();
+  fillNotice();
   if (currentTab() === 'plan') scrollToToday();
   loadFeedback();
   loadWeather();
