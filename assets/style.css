@@ -1341,3 +1341,8 @@ html.big .inv-bubble { white-space: normal; max-width: 140px; text-align: center
   html.big .inv-photo { grid-column: 2; grid-row: 4 / 6; padding-top: 46px; }
   html.big .inv-photo .inv-flip img { height: 176px; width: 100%; margin-left: 0; object-position: 100% 100%; }
 }
+/* 스티커 사진 비율이 제각각이라 높이를 맞춤 (세로로 긴 사진이 너무 길어지지 않게) */
+.tpeek img { max-height: 124px; object-fit: contain; object-position: 100% 100%; }
+html.big .tpeek img { max-height: 104px; }
+.ck-yay img { max-height: 92px; object-fit: contain; object-position: 50% 100%; }
+.who-taeo { max-height: 120px; object-fit: contain; }

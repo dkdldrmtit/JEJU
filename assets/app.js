@@ -166,11 +166,16 @@
 
   /* ---------- 화면마다 인사하는 태오 스티커 ---------- */
   const taeoSrc = (s) => `assets/photos/taeo/${s.img}.webp`;
+  // 화면마다 사진이 여러 장이면 열 때마다 한 장 (누르면 다음 장)
+  const taeoList = (key) => [].concat((T.taeo && T.taeo[key]) || []);
+  const taeoPick = (key) => { const L = taeoList(key); return L.length ? L[Math.floor(Math.random() * L.length)] : null; };
   const sayOf = (s, not) => { const L = s.says || []; if (L.length < 2) return L[0] || ''; let x; do { x = L[Math.floor(Math.random() * L.length)]; } while (x === not); return x; };
   function peekHTML(key) {
-    const s = T.taeo && T.taeo[key];
-    if (!s) return '';
-    return `<figure class="tpeek tp-${esc(key)}" data-tpeek="${esc(key)}">
+    const L = taeoList(key);
+    if (!L.length) return '';
+    const i = Math.floor(Math.random() * L.length);
+    const s = L[i];
+    return `<figure class="tpeek tp-${esc(key)}" data-tpeek="${esc(key)}" data-ti="${i}">
           <p class="tp-b" aria-live="polite">${esc(sayOf(s))}</p>
           <img src="${esc(taeoSrc(s))}" alt="${esc(s.alt || '태오')}" width="${s.w}" height="${s.h}">
         </figure>`;
@@ -797,8 +802,15 @@
     }
     const tp = e.target.closest('[data-tpeek]');
     if (tp) {
-      const s = T.taeo[tp.dataset.tpeek];
+      const L = taeoList(tp.dataset.tpeek);
+      const i = L.length > 1 ? (Number(tp.dataset.ti) + 1) % L.length : 0;
+      const s = L[i];
       const b = tp.querySelector('.tp-b');
+      const im = tp.querySelector('img');
+      if (s && L.length > 1 && im) {
+        tp.dataset.ti = String(i);
+        im.src = taeoSrc(s); im.setAttribute('width', s.w); im.setAttribute('height', s.h); im.alt = s.alt || '태오';
+      }
       if (b && s) b.textContent = sayOf(s, b.textContent);
       tp.classList.remove('tap'); void tp.offsetWidth; tp.classList.add('tap');
       return;
@@ -1481,7 +1493,7 @@
     return `<section class="block" id="checks">
       <div class="card checks${done === list.length ? ' all-done' : ''}">
         <div class="ck-head"><b>${esc(title)}</b><span class="count${done === list.length ? ' full' : ''}">${done} / ${list.length}</span></div>
-        ${done === list.length && T.taeo && T.taeo.done ? `<p class="ck-yay"><img src="${esc(taeoSrc(T.taeo.done))}" alt="${esc(T.taeo.done.alt || '')}" width="${T.taeo.done.w}" height="${T.taeo.done.h}"><span>다 챙겼어요!<small>태오가 박수 쳐요</small></span></p>` : ''}
+        ${done === list.length && taeoList('done').length ? `<p class="ck-yay">${((d) => `<img src="${esc(taeoSrc(d))}" alt="${esc(d.alt || '')}" width="${d.w}" height="${d.h}">`)(taeoPick('done'))}<span>다 챙겼어요!<small>태오가 박수 쳐요</small></span></p>` : ''}
         <ul class="checklist">${sorted.slice(0, 3).map(row).join('')}</ul>
         ${more.length ? `<details class="more"><summary><span>${more.length}개 더 보기</span><span>접기</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><ul class="checklist">${more.map(row).join('')}</ul></details>` : ''}
       </div>
@@ -2002,7 +2014,7 @@
     const p = me();
     wxSheet.innerHTML = `<div class="sheet-panel who-panel" tabindex="-1">
       <div class="sheet-grab" aria-hidden="true"></div>
-      ${T.taeo && T.taeo.who ? `<img class="who-taeo" src="${esc(taeoSrc(T.taeo.who))}" alt="" width="${T.taeo.who.w}" height="${T.taeo.who.h}">` : '<img class="who-mandarin" src="assets/icons/mandarin.webp" alt="" width="72" height="72">'}
+      ${((w) => (w ? `<img class="who-taeo" src="${esc(taeoSrc(w))}" alt="" width="${w.w}" height="${w.h}">` : '<img class="who-mandarin" src="assets/icons/mandarin.webp" alt="" width="72" height="72">'))(taeoPick('who'))}
       <h2 class="who-title">누구세요?</h2>
       <p class="who-sub">고르면 내 일정을 맨 위에 크게 보여드려요. 의견 · 투표 · 사진 올릴 때 이름도 자동으로 들어가요.</p>
       <div class="who-grid">${T.people.filter((x) => x.id !== 'taeo').map((x) => `<button type="button" class="who-btn${p && p.id === x.id ? ' on' : ''}" data-who="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div>
