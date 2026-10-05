@@ -104,16 +104,25 @@
   }
 
   /* ---------- 일정 조각 ---------- */
-  function itemHTML(it) {
+  // 누가 가는지: 전원이면 생략, 아니면 짧은 꼬리표 (태오네 · 후발대 · 이름)
+  function whoTag(who, present) {
+    if (!who || who === 'all') return '';
+    if (present && present.length === 1 && present[0] === who) return ''; // 그날 그 무리만 있으면 굳이 안 적음
+    const g = typeof who === 'string' && T.groups.find((x) => x.id === who);
+    const label = g ? (who === 'a' ? '태오네' : who === 'b' ? '후발대' : g.name) : membersOf(who).map((p) => p.name).join('·');
+    return `<span class="wtag ${typeof who === 'string' ? esc(who) : 'p'}">${esc(label)}</span>`;
+  }
+  function itemHTML(it, present) {
     const hasTime = Boolean(it.time);
     const status = it.status || 'ok';
-    const sub = [it.who ? whoText(it.who) : '', it.note || ''].filter(Boolean).join(' · ');
-    return `<li class="item s-${status}">
+    const note = it.note || '';
+    const long = note.length > 38;
+    return `<li class="item s-${status}${long ? ' has-more' : ''}"${long ? ' data-item-more' : ''}>
       <span class="time${hasTime ? ' is-set' : ''}">${esc(it.time || it.when || '미정')}</span>
       <div class="what">
         <div class="row-head"><div>
-          <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}</p>
-          ${sub ? `<p class="note">${esc(sub)}</p>` : ''}
+          <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}${whoTag(it.who, present)}</p>
+          ${note ? `<p class="note">${esc(note)}</p>${long ? '<span class="note-more" aria-hidden="true">더보기</span>' : ''}` : ''}
         </div>${it.place ? naverSide(it.place) : ''}</div>
         ${photoOf(it.photo) ? `<figure class="item-photo"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
       </div>
@@ -137,21 +146,17 @@
     const night = day.night ? stays.get(day.night) : null;
     const items = day.items || [];
     const hasRoute = (day.route || []).length > 1;
-    return `<article class="day${isToday ? ' is-today' : ''}" id="day-${day.date}" style="--dc:var(--d${i + 1})">
-      <div class="stub">
-        <span class="stub-n">DAY ${i + 1}</span>
-        <span class="stub-date">${md(day.date)}</span>
-        <span class="stub-wd">${wd(day.date)}요일</span>
-        ${isToday ? '<span class="stub-today">오늘</span>' : ''}
-      </div>
+    const present = T.groups.filter((g) => day.date >= g.arrive.date && day.date <= g.depart.date).map((g) => g.id);
+    return `<article class="day dayx${isToday ? ' is-today' : ''}" id="day-${day.date}" style="--dc:var(--d${i + 1})">
       <div class="day-body">
-        <div class="day-head">
-          <h3 class="day-title">${esc(day.title)}</h3>
-          ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선</span></button>` : ''}
+        <p class="dx-date"><b>${md(day.date)}</b> ${wd(day.date)}요일 <span class="dx-n">DAY ${i + 1}</span>${isToday ? '<span class="stub-today">오늘</span>' : ''}</p>
+        <h2 class="day-title">${esc(day.title)}</h2>
+        <div class="dx-meta">
+          <button type="button" class="day-wx" data-wx-open="${day.date}" data-wx-chip="${day.date}" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxChipHTML(day.date)}</button>
+          ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선 지도</span></button>` : ''}
         </div>
-        <button type="button" class="day-wx" data-wx-open="${day.date}" data-wx-chip="${day.date}" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxChipHTML(day.date)}</button>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
-        ${items.length ? `<ol class="items">${items.map(itemHTML).join('')}</ol>` : ''}
+        ${items.length ? `<ol class="items">${items.map((it) => itemHTML(it, present)).join('')}</ol>` : ''}
         ${day.open ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
         ${pollDayHTML(day)}
         ${day.open ? `<div class="fb" data-fb-day="${day.date}"></div>` : ''}
@@ -666,23 +671,84 @@
       <p class="note">${esc(whoText(u.who))}${u.note ? ` · ${esc(u.note)}` : ''}</p>
     </li>`).join('');
 
+    // 홈에서 날짜를 눌러 들어오면 그 날을 보여줌
+    if (pendingGoto && pendingGoto.startsWith('day-')) {
+      const k = T.days.findIndex((d) => `day-${d.date}` === pendingGoto);
+      if (k >= 0) planDay = k;
+    }
+    if (planDay == null) planDay = st.phase === 'during' ? st.index : 0;
     return `<section class="block">
         ${peekHTML('plan')}
         <h1 class="page-title">일정</h1>
-        <p class="lede">정해진 것과 아직 정할 것을 나눠 적었어요. 바뀌면 바로 고쳐둘게요.</p>
-        <p class="legend"><span class="lg s-ok"><i></i>확정</span><span class="lg s-plan"><i></i>예정</span><span class="lg s-tbd"><i></i>미정 · 정하는 중</span></p>
+        <p class="lede">날짜를 누르면 그날 일정이 나와요. 옆으로 밀어도 넘어가요.</p>
       </section>
+      ${planTabsHTML(st)}
+      <section class="block plan-panel" data-plan-panel>${planPanelHTML(planDay, st)}</section>
       ${routeMapHTML('plan', '동선 지도')}
       ${undated ? `<section class="block">
         <h2 class="h">날짜만 정하면 돼요</h2>
         <ul class="stack">${undated}</ul>
       </section>` : ''}
-      <section class="block">
-        <h2 class="h">날짜별 일정</h2>
-        <div class="days">${T.days.map((d, i) => dayHTML(d, i, st)).join('')}</div>
-        <a class="btn-link" href="#ideas">가볼 곳 · 먹을 곳 후보 보기</a>
-      </section>`;
+      <section class="block"><a class="btn-link" href="#ideas">가볼 곳 · 먹을 곳 후보 보기</a></section>`;
   }
+  let planDay = null;
+  function planTabsHTML(st) {
+    return `<nav class="dtabs" role="tablist" aria-label="날짜 고르기">${T.days.map((d, k) => {
+      const today = st.phase === 'during' && st.index === k;
+      return `<button type="button" role="tab" class="dtab${k === planDay ? ' on' : ''}${today ? ' today' : ''}" data-plan-day="${k}" aria-selected="${k === planDay}" style="--dc:var(--d${k + 1})">
+        <span class="dt-d">${dom(d.date)}</span><span class="dt-w">${wd(d.date)}</span>${today ? '<i>오늘</i>' : ''}
+      </button>`;
+    }).join('')}</nav>`;
+  }
+  function planPanelHTML(k, st) {
+    const prev = T.days[k - 1];
+    const next = T.days[k + 1];
+    return `${dayHTML(T.days[k], k, st)}
+      <div class="dnav">
+        ${prev ? `<button type="button" class="dnav-b" data-plan-day="${k - 1}">← ${dom(prev.date)}일 (${wd(prev.date)})</button>` : '<span></span>'}
+        ${next ? `<button type="button" class="dnav-b next" data-plan-day="${k + 1}">${dom(next.date)}일 (${wd(next.date)}) →</button>` : '<span></span>'}
+      </div>`;
+  }
+  function showPlanDay(k, fromSwipe) {
+    if (k < 0 || k >= T.days.length || k === planDay) return;
+    const dir = k > planDay ? 1 : -1;
+    planDay = k;
+    const panel = view.querySelector('[data-plan-panel]');
+    if (!panel) return;
+    panel.innerHTML = planPanelHTML(k, tripState());
+    view.querySelectorAll('.dtab').forEach((b) => {
+      const on = Number(b.dataset.planDay) === k;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+      if (on) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    if (!reduceMotion) { panel.style.setProperty('--dir', dir); panel.classList.remove('slide'); void panel.offsetWidth; panel.classList.add('slide'); }
+    fillFeedback();
+    fillPolls();
+    fillWeather();
+    if (view.querySelector('.route-map[data-map="plan"]')) selectMapDay('plan', String(k), false);
+    // 아래로 내려가 있었으면 날짜 탭이 보이게 위로
+    const tabs = view.querySelector('.dtabs');
+    if (tabs && (fromSwipe || panel.getBoundingClientRect().top < 0)) {
+      const y = tabs.getBoundingClientRect().top + window.scrollY - 64;
+      if (window.scrollY > y) window.scrollTo({ top: y, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  }
+  // 옆으로 밀어서 다음 날 / 전날
+  let swipe = null;
+  view.addEventListener('touchstart', (e) => {
+    const p = e.target.closest('[data-plan-panel]');
+    if (!p || e.touches.length !== 1 || e.target.closest('.route-map, input, textarea')) { swipe = null; return; }
+    swipe = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  }, { passive: true });
+  view.addEventListener('touchend', (e) => {
+    if (!swipe) return;
+    const dx = e.changedTouches[0].clientX - swipe.x;
+    const dy = e.changedTouches[0].clientY - swipe.y;
+    const quick = Date.now() - swipe.t < 700;
+    swipe = null;
+    if (quick && Math.abs(dx) > 70 && Math.abs(dy) < Math.abs(dx) * 0.5) showPlanDay(planDay + (dx < 0 ? 1 : -1), true);
+  }, { passive: true });
 
   /* ---------- 후보 ---------- */
   function renderIdeas() {
@@ -800,6 +866,10 @@
       if (b) { b.textContent = pickBubble(); placeBubble(); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
       return;
     }
+    const pd = e.target.closest('[data-plan-day]');
+    if (pd) { showPlanDay(Number(pd.dataset.planDay)); return; }
+    const more = e.target.closest('[data-item-more]');
+    if (more && !e.target.closest('a, button')) { more.classList.toggle('open'); return; }
     const tp = e.target.closest('[data-tpeek]');
     if (tp) {
       const L = taeoList(tp.dataset.tpeek);

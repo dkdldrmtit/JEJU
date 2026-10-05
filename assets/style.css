@@ -1352,6 +1352,77 @@ html.big .tpeek img { max-height: 104px; }
   position: fixed; z-index: 60; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translate(-50%, -140%);
   margin: 0; padding: 8px 14px; border-radius: 999px; max-width: calc(100vw - 32px);
   background: #2B3438; color: #fff; font-size: var(--fs-sm); font-weight: 700; text-align: center;
-  box-shadow: 0 8px 20px rgb(0 0 0 / .18); transition: transform .3s var(--ease); pointer-events: none;
+  box-shadow: 0 8px 20px rgb(0 0 0 / .18); transition: transform .3s var(--ease), visibility 0s .3s; pointer-events: none; visibility: hidden;
 }
-.offline-bar.show { transform: translate(-50%, 0); }
+.offline-bar.show { transform: translate(-50%, 0); visibility: visible; transition: transform .3s var(--ease); }
+
+/* =====================================================================
+   일정: 날짜 탭으로 하루씩 · 넓은 시간표 · 긴 설명은 두 줄만
+   ===================================================================== */
+.dtabs {
+  position: sticky; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 54px);
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px;
+  clear: both; margin: 4px 0 12px; padding: 6px; border-radius: 18px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.dtab {
+  appearance: none; font: inherit; cursor: pointer; position: relative;
+  display: grid; justify-items: center; gap: 1px; padding: 8px 0 7px; min-height: 54px;
+  border: 0; border-radius: 14px; background: var(--surface); color: var(--ink);
+  -webkit-tap-highlight-color: transparent; transition: background .2s, color .2s, transform .15s;
+}
+.dtab::after { content: ""; position: absolute; bottom: 5px; width: 14px; height: 3px; border-radius: 2px; background: var(--dc); opacity: .9; }
+.dt-d { font-family: var(--font-display); font-size: 1.3rem; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.dt-w { font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+.dtab.on { background: var(--ink); color: #fff; }
+.dtab.on .dt-w { color: rgb(255 255 255 / .75); }
+.dtab.on::after { background: #fff; }
+.dtab:active { transform: scale(.95); }
+.dtab i { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: .62rem; font-weight: 800; color: #fff; background: var(--tangerine); padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+
+.plan-panel.slide .day { animation: dx-in .32s var(--ease) both; }
+@keyframes dx-in { from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 28px)); } to { opacity: 1; transform: none; } }
+
+/* 하루 카드: 왼쪽 날짜 칸 없이 넓게 */
+.day.dayx { display: block; }
+.dayx .day-body { padding: 18px 18px 16px; }
+.dx-date { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .9rem; font-weight: 700; color: var(--muted); }
+.dx-date b { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1; color: var(--dc); font-variant-numeric: tabular-nums; }
+.dx-n { font-size: .68rem; letter-spacing: .08em; color: var(--dc); background: color-mix(in srgb, var(--dc) 12%, #fff); padding: 2px 7px; border-radius: 999px; }
+.dayx .stub-today { margin: 0; }
+.dayx .day-title { margin-top: 6px; font-size: 1.45rem; }
+.dx-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.dx-meta .day-wx { margin: 0; }
+.dayx .day-who { margin-top: 8px; }
+
+/* 시간표: 시간 · 점 · 내용 */
+.dayx .items { gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.dayx .items::before { top: 22px; }
+.dayx .item .title { font-size: 1.02rem; line-height: 1.4; }
+.dayx .item .title .pill { vertical-align: 1px; }
+.wtag { display: inline-block; margin-left: 5px; vertical-align: 1px; font-size: .68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--sea-soft); color: var(--sea-ink); white-space: nowrap; }
+.wtag.b { background: var(--tangerine-soft); color: var(--tangerine-ink); }
+.wtag.p { background: var(--sunken); color: var(--ink); }
+/* 긴 설명은 두 줄만, 누르면 전부 */
+.item.has-more { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.item.has-more .note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.item.has-more.open .note { display: block; }
+.note-more { display: inline-block; margin-top: 2px; font-size: .75rem; font-weight: 700; color: var(--sea-ink); }
+.item.open .note-more { display: none; }
+/* 사진은 낮게 (화면을 덜 차지하게) */
+.dayx .item-photo { aspect-ratio: auto; height: 92px; margin-top: 8px; }
+
+/* 아래쪽: 전날 · 다음 날 */
+.dnav { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.dnav-b {
+  appearance: none; font: inherit; cursor: pointer; padding: 11px 14px; border: 0; border-radius: 14px;
+  background: var(--surface); color: var(--ink); font-weight: 700; font-size: var(--fs-sm);
+}
+.dnav-b.next { margin-left: auto; background: var(--ink); color: #fff; }
+.dnav-b:active { transform: scale(.97); }
+
+html.big .dtabs { gap: 4px; padding: 4px; }
+html.big .dt-d { font-size: 1.15rem; }
+html.calm .plan-panel.slide .day { animation: none; }
+.day.dayx { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 140px); }
