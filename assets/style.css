@@ -1667,3 +1667,13 @@ html.calm .pb.tbd, html.calm .pb-badge.on { animation: none; }
 /* 사진 끝이 잘린 태오(자는 사진 주먹)는 카드 오른쪽 밖으로 살짝 밀어서 잘린 곳이 안 보이게 */
 .inv-photo.edge-r .inv-flip { position: relative; left: 15%; }
 .inv-photo.edge-r .inv-bubble { right: 18%; }
+
+/* 장소 찾기: 네이버 지도 연결 */
+.pl-map { gap: 2px; display: grid; justify-items: center; align-content: center; }
+.pl-map .ws-n, .pl-n-open .ws-n { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: #03C75A; color: #fff; font-size: .7rem; font-weight: 900; }
+.pl-naver { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; padding: 14px; border-radius: 16px; background: #EAF8EF; }
+.pl-naver p { grid-column: 1 / -1; display: grid; gap: 2px; }
+.pl-naver p b { font-size: var(--fs-sm); }
+.pl-naver p span { font-size: var(--fs-xs); color: var(--muted); }
+.pl-n-open, .pl-n-paste { appearance: none; font: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; border: 0; border-radius: 12px; background: #fff; color: #037A38; font-weight: 800; font-size: var(--fs-sm); text-decoration: none; }
+.pl-n-paste { background: #03C75A; color: #fff; }

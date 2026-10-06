@@ -135,7 +135,7 @@
     return `<ul class="slot-sug">${list.map((x) => {
       const m = String(x.text).match(/^📍\s*([^·\n]+)/);
       const what = m ? m[1].trim() : String(x.text).replace(/^\d+일 [\d:~]+ \([^)]*\):\s*/, '').slice(0, 40);
-      return `<li><span class="ss-n">${esc(x.name || '가족')}</span><b>${esc(what)}</b>${x.link ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">지도</a>` : ''}${x.ai ? '<em>AI 답 ✓</em>' : ''}</li>`;
+      return `<li><span class="ss-n">${esc(x.name || '가족')}</span><b>${esc(what)}</b>${x.link ? `<a href="${esc(/naver/.test(x.link) ? x.link : naverOf(what))}" target="_blank" rel="noopener">지도</a>` : ''}${x.ai ? '<em>AI 답 ✓</em>' : ''}</li>`;
     }).join('')}</ul>`;
   }
   function slotRowHTML(it, day) {
@@ -2604,12 +2604,19 @@
     renderPlaceSearch();
     loadKakao();
   }
+  const naverOf = (name, addr) => `https://map.naver.com/p/search/${encodeURIComponent(`${name} ${String(addr || '제주').split(' ').slice(0, 2).join(' ')}`.trim())}`;
+  const isNaverLink = (v) => /^https?:\/\/(naver\.me|(m\.)?map\.naver\.com|m\.place\.naver\.com|place\.naver\.com)\//i.test(String(v).trim());
   function renderPlaceSearch(q = '') {
     const body = wxSheet.querySelector('[data-pl-body]');
     if (!body) return;
     body.innerHTML = `<div class="pl-search"><input type="search" class="fb-input" data-pl-q placeholder="예: 카멜리아힐, 흑돼지, 키즈카페" value="${esc(q)}" enterkeyhint="search" autocomplete="off"></div>
-      <p class="pl-hint">이름이나 '흑돼지 · 키즈카페'처럼 종류로 찾아도 돼요. 제주 안에서만 찾아요.</p>
-      <ul class="pl-list" data-pl-list></ul>`;
+      <p class="pl-hint">이름이나 '흑돼지 · 키즈카페'처럼 종류로 찾아도 돼요. 네이버 지도 링크를 붙여 넣어도 돼요.</p>
+      <ul class="pl-list" data-pl-list></ul>
+      <div class="pl-naver">
+        <p><b>네이버 지도에서 찾았어요</b><span>네이버 지도 앱 → 장소 → 공유 → 링크 복사 후 붙여 넣기</span></p>
+        <a class="pl-n-open" href="https://map.naver.com/p/search/${encodeURIComponent(q ? `제주 ${q}` : '제주')}" target="_blank" rel="noopener" data-pl-naver-open><span class="ws-n">N</span>네이버 지도 열기</a>
+        <button type="button" class="pl-n-paste" data-pl-paste>링크 붙여 넣기</button>
+      </div>`;
     const inp = body.querySelector('[data-pl-q]');
     inp.focus({ preventScroll: true });
     if (q) runPlaceSearch(q);
@@ -2648,7 +2655,7 @@
           <span class="pl-addr">${esc(r.addr)}</span>
           <span class="pl-dist">서머셋에서 차로 약 ${driveMin(r.km)}분 · ${r.km.toFixed(1)}km</span>
         </button>
-        <a class="pl-map" href="${esc(r.url)}" target="_blank" rel="noopener">지도</a>
+        <a class="pl-map" href="${esc(naverOf(r.name, r.addr))}" target="_blank" rel="noopener" aria-label="${esc(r.name)} 네이버 지도"><span class="ws-n">N</span>지도</a>
       </li>`).join('');
     }, { bounds, size: 15, location: new K.LatLng(BASE.lat, BASE.lon) });
   }
@@ -2658,7 +2665,7 @@
     if (!body || !r) return;
     const slots = allSlots().filter((x) => today() <= toDate(x.date));
     const cur = place.ctx ? slotKey(place.ctx) : '';
-    body.innerHTML = `<div class="pl-chosen"><b>📍 ${esc(r.name)}</b><span>${esc(r.cat)} · 서머셋에서 차로 약 ${driveMin(r.km)}분</span><a href="${esc(r.url)}" target="_blank" rel="noopener">지도 보기</a></div>
+    body.innerHTML = `<div class="pl-chosen"><b>📍 ${esc(r.name)}</b><span>${esc([r.cat, r.km != null ? `서머셋에서 차로 약 ${driveMin(r.km)}분` : ''].filter(Boolean).join(' · '))}</span><a href="${esc(r.naver ? r.url : naverOf(r.name, r.addr))}" target="_blank" rel="noopener">네이버 지도에서 보기</a></div>
       <form class="pl-form" data-pl-form>
         <p class="pl-label">언제 갈까요?</p>
         <div class="pl-slots">${slots.map((x) => `<label><input type="radio" name="slot" value="${esc(slotKey(x))}"${slotKey(x) === cur ? ' checked' : ''}><span>${esc(slotName(x))}</span></label>`).join('')}
@@ -2669,6 +2676,20 @@
         <p class="fb-status" data-pl-status aria-live="polite"></p>
       </form>`;
   }
+  function renderNaverPaste(link = '') {
+    const body = wxSheet.querySelector('[data-pl-body]');
+    if (!body) return;
+    body.innerHTML = `<form class="pl-form" data-pl-naver-form>
+        <p class="pl-label">네이버 지도 링크</p>
+        <input name="link" class="fb-input" inputmode="url" placeholder="https://naver.me/…" value="${esc(link)}" autocomplete="off">
+        <p class="pl-label">장소 이름</p>
+        <input name="name" class="fb-input" maxlength="40" placeholder="예: 카멜리아힐" required>
+        <div class="nt-btns"><button type="submit" class="btn primary">다음</button><button type="button" class="btn" data-pl-back>다시 찾기</button></div>
+        <p class="fb-status" data-pl-status aria-live="polite"></p>
+      </form>`;
+    const f = body.querySelector(link ? '[name=name]' : '[name=link]');
+    if (f) f.focus({ preventScroll: true });
+  }
   async function submitPlace(form) {
     const r = place.pick;
     const fd = new FormData(form);
@@ -2676,7 +2697,7 @@
     const memo = String(fd.get('memo') || '').trim();
     const [date, start, end, label] = sk ? sk.split('|') : ['', '', '', ''];
     const when = sk ? `${dom(date)}일 ${start}~${end} (${String(label).replace(/\s*\(미정\)|\s*미정/g, '').trim()})에 가고 싶어요` : '언제든 가 보고 싶어요';
-    const text = `📍 ${r.name} · ${when} · ${r.cat} · 서머셋에서 차로 약 ${driveMin(r.km)}분${memo ? ` · ${memo}` : ''}`;
+    const text = `📍 ${r.name} · ${when}${r.cat ? ` · ${r.cat}` : ''}${r.km != null ? ` · 서머셋에서 차로 약 ${driveMin(r.km)}분` : ''}${memo ? ` · ${memo}` : ''}`;
     const st = wxSheet.querySelector('[data-pl-status]');
     st.textContent = '올리는 중…';
     try {
@@ -2697,15 +2718,38 @@
     if (!e.target.matches('[data-pl-q]')) return;
     clearTimeout(place.timer);
     const q = e.target.value;
+    // 검색칸에 네이버 지도 링크를 붙여 넣으면 바로 붙여 넣기 화면으로
+    if (isNaverLink(q)) { renderNaverPaste(q.trim()); return; }
+    const nv = wxSheet.querySelector('[data-pl-naver-open]');
+    if (nv) nv.href = `https://map.naver.com/p/search/${encodeURIComponent(q.trim() ? `제주 ${q.trim()}` : '제주')}`;
     place.timer = setTimeout(() => runPlaceSearch(q), 350);
   });
   wxSheet.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-pl-q]')) { e.preventDefault(); clearTimeout(place.timer); runPlaceSearch(e.target.value); } });
   wxSheet.addEventListener('click', (e) => {
     const pk = e.target.closest('[data-pl-pick]');
     if (pk) { place.pick = place.results[Number(pk.dataset.plPick)]; renderPlaceConfirm(); return; }
-    if (e.target.closest('[data-pl-back]')) { renderPlaceSearch(place.pick ? '' : ''); }
+    if (e.target.closest('[data-pl-back]')) { renderPlaceSearch(''); return; }
+    if (e.target.closest('[data-pl-paste]')) {
+      // 복사해 둔 링크가 있으면 바로 채움 (권한이 없으면 빈 칸)
+      const go = (v) => renderNaverPaste(isNaverLink(v) ? v.trim() : '');
+      if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(go, () => go(''));
+      else go('');
+    }
   });
   wxSheet.addEventListener('submit', (e) => {
+    const nf = e.target.closest('[data-pl-naver-form]');
+    if (nf) {
+      e.preventDefault();
+      const fd = new FormData(nf);
+      const link = String(fd.get('link') || '').trim();
+      const name = String(fd.get('name') || '').trim();
+      const st = nf.querySelector('[data-pl-status]');
+      if (link && !isNaverLink(link)) { st.textContent = '네이버 지도 링크가 아닌 것 같아요 (naver.me 로 시작해요)'; return; }
+      if (!name) { st.textContent = '장소 이름을 적어 주세요'; return; }
+      place.pick = { name, cat: '', km: null, naver: true, url: link || naverOf(name) };
+      renderPlaceConfirm();
+      return;
+    }
     const f = e.target.closest('[data-pl-form]');
     if (!f) return;
     e.preventDefault();
