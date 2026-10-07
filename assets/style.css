@@ -1677,3 +1677,20 @@ html.calm .pb.tbd, html.calm .pb-badge.on { animation: none; }
 .pl-naver p span { font-size: var(--fs-xs); color: var(--muted); }
 .pl-n-open, .pl-n-paste { appearance: none; font: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; border: 0; border-radius: 12px; background: #fff; color: #037A38; font-weight: 800; font-size: var(--fs-sm); text-decoration: none; }
 .pl-n-paste { background: #03C75A; color: #fff; }
+
+/* =====================================================================
+   점검 뒤 손본 것: 긴 화면의 바로 가기 칩 · 투표 코스 접기 · 큰 글씨에서 시간표 유지
+   ===================================================================== */
+.jumps { position: sticky; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 54px); display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 4px -16px 0; padding: 6px 16px; background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); clear: both; }
+.jumps::-webkit-scrollbar { display: none; }
+.jumps a { flex: none; padding: 8px 13px; border-radius: 999px; background: var(--surface); color: var(--ink); font-size: var(--fs-sm); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.jumps a:active { transform: scale(.96); }
+.block[id] { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 112px); }
+.po-more { margin-top: 6px; }
+.po-more summary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; list-style: none; font-size: .78rem; font-weight: 800; color: var(--sea-ink); padding: 4px 0; -webkit-tap-highlight-color: transparent; }
+.po-more summary::-webkit-details-marker { display: none; }
+.po-more summary span { font-weight: 600; color: var(--muted); }
+.po-more summary::after { content: "▾"; font-size: .7rem; }
+.po-more[open] summary::after { content: "▴"; }
+/* 큰 글씨 모드: 6일 시간표는 칸이 좁아져 글자가 깨지므로 보통 크기로 유지 (지도와 같은 방식) */
+html.big .planner-card { zoom: calc(1 / 1.18); }

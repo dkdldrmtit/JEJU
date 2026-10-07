@@ -310,7 +310,7 @@
         <h1 class="inv-title">${esc(H.title || T.shortTitle)}</h1>
         <p class="inv-dates">${md(T.start)}(${wd(T.start)}) – ${md(T.end)}(${wd(T.end)})</p>
         <p class="inv-note">${esc(H.note || `${nights}박 ${dates.length}일 · ${T.tagline}`)}</p>
-        ${T.share ? `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>` : ''}
+        ${T.share ? (st.phase === 'after' && T.recap ? `<button type="button" class="kakao-share" data-share="recap">${ICON.talk}<span>추억 카톡으로 보내기</span></button>` : `<button type="button" class="kakao-share" data-share>${ICON.talk}<span>카톡으로 초대하기</span></button>`) : ''}
       </div>
       ${look && look.photo ? `<figure class="inv-photo${look.edge ? ` edge-${esc(look.edge)}` : ''}">
         <p class="inv-bubble" data-bubble aria-live="polite">${esc(pickBubble())}</p>
@@ -450,7 +450,7 @@
         <p class="meta">${esc(b.meta)}</p>
       </div>${naverSide(b.q)}</div>
     </li>`).join('');
-    return `<section class="block">
+    return `<section class="block" id="i-fixed">
       <h2 class="h">정해진 것</h2>
       <ul class="stack">${rows}</ul>
     </section>`;
@@ -699,7 +699,7 @@
     if (!list.length) return '';
     const li = (u) => `<li><span class="u-d">${esc(md(u.date))}</span><span class="u-t">${esc(u.text)}${u.by ? `<small>${esc(u.by)}</small>` : ''}</span></li>`;
     const rest = list.slice(2, 12);
-    return `<section class="block">
+    return `<section class="block" id="i-news">
       <h2 class="h">업데이트 소식</h2>
       <div class="card updates-card">
         <ol class="updates">${list.slice(0, 2).map(li).join('')}</ol>
@@ -816,6 +816,16 @@
     if (quick && Math.abs(dx) > 70 && Math.abs(dy) < Math.abs(dx) * 0.5) showPlanDay(planDay + (dx < 0 ? 1 : -1), true);
   }, { passive: true });
 
+  // 긴 화면 위에 붙는 '바로 가기' 칩 (같은 화면 안에서 이동)
+  const jumpHTML = (items) => `<nav class="jumps" aria-label="바로 가기">${items.map(([id, label]) => `<a href="#${id}" data-jump="${esc(id)}">${esc(label)}</a>`).join('')}</nav>`;
+  view.addEventListener('click', (e) => {
+    const j = e.target.closest('[data-jump]');
+    if (!j) return;
+    e.preventDefault();
+    const el = document.getElementById(j.dataset.jump);
+    if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  });
+
   /* ---------- 후보 ---------- */
   function renderIdeas() {
     const ideaCard = (x) => `<li class="card idea">
@@ -828,14 +838,15 @@
         <h1 class="page-title">가볼 곳 · 먹을 곳</h1>
         <p class="lede">${esc(T.ideasNote)}</p>
       </section>
+      ${jumpHTML([...((T.polls || []).length ? [['polls', '가족 투표']] : []), ['voices', '가족 의견'], ...(T.ideaGroups || []).map((g, i) => [`ideas-${i}`, g.title]), ...(T.rainPlan ? [['rain', '비 오는 날']] : [])])}
       ${pollsSectionHTML()}
-      <section class="block">
+      <section class="block" id="voices">
         <h2 class="h">가족 의견</h2>
         <p class="lede">하고 싶은 거, 먹고 싶은 거 아무거나 남겨주세요. 링크도 붙일 수 있어요.</p>
         <button type="button" class="place-cta" data-place-find=""><span aria-hidden="true">🔍</span><span><b>장소 찾아서 제안하기</b><small>검색해서 고르면 비어 있는 시간에 바로 제안돼요</small></span></button>
         <div class="card fb fb-all" data-fb-day="all"></div>
       </section>
-      ${(T.ideaGroups || []).map((g) => `<section class="block">
+      ${(T.ideaGroups || []).map((g, i) => `<section class="block" id="ideas-${i}">
         <h2 class="h">${esc(g.title)}</h2>
         <ul class="ideas">${g.items.map(ideaCard).join('')}</ul>
       </section>`).join('')}
@@ -1124,15 +1135,16 @@
         <h1 class="page-title">정보</h1>
         <p class="lede">항공편 · 숙소 · 렌터카 · 날씨 · 병원을 한곳에 모았어요.</p>
       </section>
-      <section class="block"><h2 class="h">누가 언제 오고 가요</h2><ul class="stack">${groupsHTML}</ul>
+      ${jumpHTML([['i-when', '오고 가요'], ['i-stay', '숙소'], ['i-car', '렌터카'], ['i-wx', '날씨'], ['i-sos', '비상 연락'], ['baby', '태오'], ['i-fixed', '정해진 것'], ['i-news', '소식']])}
+      <section class="block" id="i-when"><h2 class="h">누가 언제 오고 가요</h2><ul class="stack">${groupsHTML}</ul>
         ${T.guideB ? `<a class="btn-link" href="#guide">${esc(T.guideB.linkText || '후발대 안내 보기')}</a>` : ''}</section>
       <section class="block"><h2 class="h">준비물</h2>
         <a class="card map-teaser" href="#pack"><span class="mt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="16" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="m9 13.5 2 2 4-4"/></svg></span><span class="mt-t"><b>준비물 체크리스트</b><small>꼭 챙길 것 · 옷 · 태오 · 운전 — 체크는 각자 휴대폰에 저장</small></span><svg class="mt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
       </section>
-      <section class="block"><h2 class="h">숙소</h2><ul class="stack">${staysHTML}</ul></section>
-      <section class="block"><h2 class="h">렌터카</h2>${carHTML}</section>
-      <section class="block"><h2 class="h">날씨</h2>${weatherHTML}</section>
-      <section class="block"><h2 class="h">비상 연락</h2>${emergencyHTML}</section>
+      <section class="block" id="i-stay"><h2 class="h">숙소</h2><ul class="stack">${staysHTML}</ul></section>
+      <section class="block" id="i-car"><h2 class="h">렌터카</h2>${carHTML}</section>
+      <section class="block" id="i-wx"><h2 class="h">날씨</h2>${weatherHTML}</section>
+      <section class="block" id="i-sos"><h2 class="h">비상 연락</h2>${emergencyHTML}</section>
       ${babyInfoHTML()}
       ${bookingsHTML()}
       ${todoHTML()}
@@ -1872,7 +1884,7 @@
             const mine = me && vs.includes(me);
             const top = lead && !lead.tie && lead.opt.id === o.id;
             return `<li class="${top ? 'top' : ''}">
-              <div class="po-t"><b>${esc(o.name)}${top ? ' <span class="po-1">1등</span>' : ''}</b><p>${esc([o.drive, o.desc].filter(Boolean).join(' · '))}</p>${o.plan ? `<ol class="po-plan">${o.plan.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}
+              <div class="po-t"><b>${esc(o.name)}${top ? ' <span class="po-1">1등</span>' : ''}</b><p>${esc([o.drive, o.desc].filter(Boolean).join(' · '))}</p>${o.plan ? `<details class="po-more"><summary>코스 보기 <span>${o.plan.length}단계</span></summary><ol class="po-plan">${o.plan.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></details>` : ''}
                 ${vs.length ? `<p class="po-who">${esc(vs.join(' · '))}</p>` : ''}</div>
               ${naverSide(o.q || o.name)}
               <button type="button" class="heart${mine ? ' on' : ''}" data-vote="${esc(p.id)}|${esc(o.id)}" aria-pressed="${mine ? 'true' : 'false'}" aria-label="${esc(o.name)} 하트"${!ready || closed ? ' disabled' : ''}>
