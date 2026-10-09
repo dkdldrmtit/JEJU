@@ -241,8 +241,6 @@
   }
 
   /* ---------- 홈 ---------- */
-  // 태오 말풍선: 열 때마다 하나씩 랜덤 (방금 나온 건 피함), 태오를 누르면 다음 말
-  let lastBubble = -1;
   // 낮에는 여러 장 중 하나 (열 때마다 지난번과 다른 사진, 누르면 다음 사진)
   // 밤에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오
   const HERO_KEY = 'jeju2026.heroLast';
@@ -279,17 +277,137 @@
     b.style.top = `${Math.max(0, Math.round(top))}px`;
   }
   window.addEventListener('resize', () => placeBubble());
-  function pickBubble() {
-    const look = heroLook();
+  /* 태오 말풍선: 사진 · 날짜 · 시간 · 날씨 · 일정 · 보는 사람에 맞춰 고름
+     상황에 맞는 말(무게 3~4)이 사진에 붙은 말(무게 1)보다 자주 나와요. 방금 나온 말은 피함 */
+  let lastTalk = '';
+  const hmNow = () => { const n = nowDate(); return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`; };
+  const nights = (n) => (n <= 10 ? `${['한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'][n - 1]} 밤` : `${n}밤`);
+  function talkPool(look) {
+    const pool = [];
+    const add = (w, ...lines) => lines.forEach((t) => { if (t) pool.push({ t, w }); });
+    const tags = look.tags || [];
+    const has = (k) => tags.includes(k);
+    const st = tripState();
+    const now = nowDate();
+    const h = now.getHours();
+    const hm = hmNow();
+    const iso = isoOf(today());
     const who = T.people.find((p) => p.name === savedName());
-    // 고른 사람이 있으면 가끔 그 사람을 불러줌 (할머니 보고 싶어요!)
-    if (look.day && who && who.call && Math.random() < 0.4 && lastBubble !== -2) { lastBubble = -2; return `${who.call} 보고 싶어요!`; }
-    const list = look.bubbles || [''];
-    if (list.length < 2) return list[0] || '';
-    let i;
-    do { i = Math.floor(Math.random() * list.length); } while (i === lastBubble);
-    lastBubble = i;
-    return list[i];
+    const call = who && who.call;
+    const night = !look.day && look === (T.hero || {}).night;
+    const fill = (t) => (t.includes('{call}') ? (call ? t.replace('{call}', call) : '') : t);
+
+    // 1. 그날 · 그 시간 대사 (trip.js hero.talk)
+    ((T.hero || {}).talk || []).forEach((x) => {
+      if (x.date && x.date !== iso) return;
+      if (Boolean(x.night) !== night) return;
+      if (x.from && hm < x.from) return;
+      if (x.to && hm >= x.to) return;
+      if (x.group && (!who || who.group !== x.group)) return;
+      if (x.not && who && who.group === x.not) return;
+      if (x.who && (!who || x.who !== who.id)) return;
+      add(4, ...x.lines.map(fill));
+    });
+    if (night) { add(1, ...(look.bubbles || [])); return pool; }
+
+    // 2. 보는 사람
+    if (call) {
+      // 지금 제주에 같이 있는지 (후발대는 12일 밤 도착 ~ 15일 오후 출발)
+      const g = T.groups.find((x) => x.id === who.group);
+      const at = (pt) => new Date(`${pt.date}T${pt.time || '12:00'}:00`);
+      const together = st.phase === 'during' && g && (g.id === 'a' || (now >= at(g.arrive) && now < at(g.depart)));
+      if (st.phase === 'before' || (st.phase === 'during' && !together)) add(2, `${call} 보고 싶어요!`);
+      if (together) add(2, `${call} 최고!`, `${call}랑 노는 게 좋아요`);
+      if (st.phase === 'after') add(2, `${call}, 또 놀러 가요!`);
+      if (who.id === 'minseok' && st.phase === 'during') add(2, '아빠 운전 조심해요!');
+      if (has('dad') && who.id === 'minseok') add(4, '아빠 어깨 내 자리!');
+    }
+
+    // 3. 며칠 남았는지
+    if (st.phase === 'before') {
+      if (st.dday >= 2) add(3, `${nights(st.dday)} 자면 제주!`);
+      if (st.dday >= 2 && st.dday <= 6) add(2, '짐 싸기 시작했어요?');
+      const b = T.groups.find((g) => g.id === 'b');
+      if (who && who.group === 'b' && b) { const n = dayDiff(today(), toDate(b.arrive.date)); if (n >= 2) add(3, `${call}, ${nights(n)} 자면 만나요!`); }
+      if (has('move')) add(4, '제주에서 걸을 연습 중!');
+      if (has('gyul')) add(3, '귤 모자 쓰고 갈래요!');
+    }
+
+    // 4. 요일 · 시간
+    if (st.phase === 'before') {
+      const d = now.getDay();
+      if (d === 5) add(2, '금요일이다! 주말이다!');
+      if (d === 0 || d === 6) add(2, '주말엔 짐 싸기!');
+      if (d === 1) add(2, '월요일 힘내요!');
+    }
+    if (h >= 6 && h < 10) add(2, '좋은 아침이에요!', '나는 벌써 깼어요');
+    if ((hm >= '11:30' && hm < '13:30') || (hm >= '17:30' && hm < '19:30')) {
+      add(2, '밥 먹었어요?');
+      if (has('eat')) add(4, '밥 먹을 시간! 나도 냠냠');
+    }
+    if (h >= 14 && h < 17) add(2, '낮잠 자고 일어났어요');
+    if (h >= 19 && h < 21) {
+      add(2, '이제 슬슬 졸려요…');
+      if (has('bath')) add(4, '목욕하고 뽀송하게 잘래요');
+    }
+    if (has('hanbok') && iso.endsWith('-10-09')) add(5, '한글날이라 한복 입었어요!');
+
+    // 5. 날씨 (여행 중엔 오늘, 출발 닷새 전부터는 첫날 예보)
+    const wxDay = st.phase === 'during' ? st.iso : (st.phase === 'before' && st.dday <= 5 ? T.start : null);
+    const w = wxDay && wxOf(wxDay);
+    if (w && !w.normal) {
+      const pre = st.phase === 'before' ? '제주는 ' : '';
+      if (w.type === 'rain' || w.type === 'storm' || (w.pop != null && w.pop >= 60)) {
+        add(3, `${pre}비 온대요, 우산 챙겨요`, '비 오면 실내에서 놀아요');
+        if (has('bath')) add(4, '비 와도 난 뽀송해요');
+      } else if (w.type === 'sun' || w.type === 'partly') {
+        add(3, w.type === 'sun' ? (pre ? '제주는 맑대요!' : '오늘 날씨 맑음!') : '구름 조금, 좋은 날!');
+        if (w.max >= 24) add(3, '햇볕 쨍쨍, 모자 써요!');
+        if (has('sun') || has('hat')) add(4, '햇살 좋다, 모자 챙겼어요!');
+        if (has('feet')) add(4, '바다에 발 담글래요!');
+      }
+      if (w.wind != null && w.wind >= 8) { add(3, '바람 쌩쌩! 겉옷 챙겨요'); if (has('hat')) add(4, '바람 불어도 모자 꼭!'); }
+      if (w.min <= 14 && (h < 11 || h >= 18)) add(2, '아침엔 쌀쌀해요, 담요 덮어 줘요');
+      if (w.max >= 20 && h < 15) add(1, `${st.phase === 'before' ? '제주 첫날' : '오늘'} ${w.max}도래요`);
+    }
+
+    // 6. 지금 하는 일정 · 곧 할 일정
+    if (st.phase === 'during') {
+      const day = T.days[st.index] || {};
+      const bl = day.blocks || [];
+      const cur = bl.find((b) => b[0] <= hm && hm < b[1]);
+      const next = bl.find((b) => b[0] > hm && toH(b[0]) - toH(hm) <= 1);
+      if (cur) {
+        const [, , label, kind, tbd] = cur;
+        const name = label.replace(/\s*\(?미정\)?/, '');
+        if (tbd) add(3, kind === 'meal' ? `${name} 뭐 먹어요?` : `${name} 어디 가요?`);
+        else if (kind === 'meal') { add(3, `${label}, 맛있게 먹어요!`); if (has('eat')) add(4, `${label}, 나도 한 입!`); }
+        else if (kind === 'play') { add(3, '신난다! 놀러 가요'); if (has('play') || has('move')) add(4, '나도 같이 놀래요!'); }
+        else if (kind === 'move') { add(3, '차 타고 슝~', '카시트에 잘 앉아 있어요'); if (has('dad')) add(4, '아빠 운전 최고!'); }
+        else if (kind === 'fly') { add(3, '비행기 슝~'); if (has('milk')) add(5, '쪽쪽 먹으면 귀 안 아파요'); if (has('up')) add(4, '나도 비행기처럼 슝!'); }
+        else if (kind === 'rest') add(3, label.includes('짐') ? '짐 쌀 때 나도 넣어 줘요' : '쉬는 시간, 뒹굴뒹굴~');
+      }
+      if (next && !next[4] && next[3] !== 'rest') add(3, next[3] === 'fly' ? '곧 비행기 타요!' : `곧 ${next[2]}!`);
+    }
+
+    // 7. 아직 안 한 투표
+    if (who && who.id !== 'taeo' && votes) {
+      const todo = (T.polls || []).filter((p) => today() <= toDate(p.closes) && !p.options.some((o) => votersOf(p.id, o.id).includes(who.name)));
+      todo.forEach((p) => add(3, `${p.short || '투표'} 골라 줘요!`));
+      if (todo.length) add(3, '투표하면 하트 뿅!');
+    }
+
+    // 8. 사진에 붙은 말
+    add(1, ...(look.bubbles || []));
+    return pool;
+  }
+  function pickBubble() {
+    const pool = talkPool(heroLook()).filter((x) => x.t !== lastTalk);
+    if (!pool.length) return lastTalk;
+    let r = Math.random() * pool.reduce((a, x) => a + x.w, 0);
+    const hit = pool.find((x) => (r -= x.w) < 0) || pool[pool.length - 1];
+    lastTalk = hit.t;
+    return hit.t;
   }
 
   function heroHTML(st) {
@@ -988,7 +1106,6 @@
       if (img && heroLook().day && dayLooks.length > 1) {
         heroIdx = (heroIdx + 1) % dayLooks.length;
         const L = dayLooks[heroIdx];
-        lastBubble = -1;
         img.src = L.photo; img.setAttribute('width', L.w); img.setAttribute('height', L.h); img.alt = L.alt || '';
         img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap');
       }
