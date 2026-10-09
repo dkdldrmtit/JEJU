@@ -2825,11 +2825,11 @@
     const cur = n.text ? (n.until || '') : isoOf(t0);
     wxSheet.innerHTML = `<div class="sheet-panel nt-panel" tabindex="-1">
       <div class="sheet-grab" aria-hidden="true"></div>
-      <div class="ws-head"><div><p class="ws-day">민석 폰에서만 보여요</p><p class="ws-main"><b>공지 올리기</b></p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
+      <div class="ws-head"><div><p class="ws-day">민석 폰에서만 보여요</p><p class="ws-main"><b>${n.text ? '공지 고치기' : '공지 올리기'}</b></p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
       <form class="nt-form" data-notice-form>
         <textarea name="t" class="fb-input" rows="3" maxlength="200" placeholder="예: 내일 아침 9시에 로비에서 만나요 · 우산 챙겨요">${esc(n.text || '')}</textarea>
         <div class="nt-until">${opts.map(([v, l]) => `<label><input type="radio" name="u" value="${v}"${v === cur ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
-        <div class="nt-btns"><button type="submit" class="btn primary">올리기</button>${n.text ? '<button type="button" class="btn" data-notice-clear>공지 내리기</button>' : ''}</div>
+        <div class="nt-btns"><button type="submit" class="btn primary">${n.text ? '고치기' : '올리기'}</button>${n.text ? '<button type="button" class="btn" data-notice-clear>공지 내리기</button>' : ''}</div>
         <p class="fb-status" data-nt-status aria-live="polite"></p>
       </form>
     </div>`;
