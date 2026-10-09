@@ -52,6 +52,10 @@ window.TRIP = {
       { photo: 'assets/photos/taeo/hero-bottle.webp', w: 600, h: 748, alt: '두 손으로 젖병을 잡고 먹는 태오', bubbles: ['꿀꺽꿀꺽… 맛있다', '나도 혼자 먹어요', '든든하게 먹고 출발!'] },
       { photo: 'assets/photos/taeo/hero-dad.webp', w: 600, h: 706, alt: '아빠 어깨에 안겨 활짝 웃는 태오', bubbles: ['아빠 어깨 최고!', '높다 높아!', '꺄르르 제주 가요!'] },
       { photo: 'assets/photos/taeo/hero-hat.webp', w: 600, h: 576, alt: '니트 모자 쓰고 햇살 받는 태오', bubbles: ['햇살 좋다~', '제주 바람 맞으러 가요', '모자 챙겼어요!'] },
+      { photo: 'assets/photos/taeo/hero-tilt.webp', w: 600, h: 652, alt: '고개를 갸웃하고 쳐다보는 태오', bubbles: ['응? 뭐라고요?', '제주 언제 가요?', '갸우뚱~'] },
+      { photo: 'assets/photos/taeo/hero-milk.webp', w: 600, h: 891, alt: '누워서 젖병을 꼭 잡고 먹는 태오', bubbles: ['우유 먹는 중… 잠깐만요', '다 먹고 놀아요!', '꿀꺽꿀꺽'] },
+      { photo: 'assets/photos/taeo/hero-towel.webp', w: 600, h: 762, alt: '목욕하고 수건 모자를 쓴 태오', bubbles: ['목욕 끝! 뽀송뽀송', '수영장도 가요?', '개운하다~'] },
+      { photo: 'assets/photos/taeo/hero-stand.webp', w: 600, h: 1087, alt: '두 발로 서서 활짝 웃는 태오', bubbles: ['나 섰어요!', '제주 땅 밟을래요', '꺄르르, 신난다!'] },
       { photo: 'assets/photos/taeo/hero-peek.webp', w: 534, h: 607, alt: '고개를 돌려 쳐다보는 태오', bubbles: ['누구 왔어요?', '할머니?', '나 보러 왔어요?'] },
     ],
     // 밤(21시~6시)에는 자는 태오, 여행이 끝나면 번쩍 안긴 태오로 바뀜
