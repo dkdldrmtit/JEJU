@@ -992,11 +992,18 @@
     if (moved) savePack(st);
     return st;
   })();
-  const packKey = (section, item) => (typeof item === 'string' ? item : item.t);
+  const packKey = (section, item) => (typeof item === 'string' ? item : item.id || item.t);
   const PACK_HIDE = 'jeju2026.packHide';
   const packHide = () => store.get(PACK_HIDE) === '1';
   const packDone = (sec) => sec.items.filter((it) => packState[packKey(sec, it)]).length;
 
+  // 태오네(후발대가 아니면)는 가방부터, 후발대는 '모두' 묶음부터
+  const PACK_PARTS = { bags: '태오네 가방', all: '모두 챙길 것' };
+  function packParts() {
+    const me = T.people.find((p) => p.name === savedName());
+    const order = me && me.group === 'b' ? ['all', 'bags'] : ['bags', 'all'];
+    return order.map((k) => ({ k, label: PACK_PARTS[k], list: T.packing.map((sec, si) => ({ sec, si })).filter((x) => (x.sec.part || 'all') === k) })).filter((x) => x.list.length);
+  }
   function packSummaryHTML() {
     const all = T.packing.reduce((a, sec) => a + sec.items.length, 0);
     const done = T.packing.reduce((a, sec) => a + packDone(sec), 0);
@@ -1004,25 +1011,36 @@
     return `<div class="card pk-sum">
       <div class="pk-sum-top"><p><b>${done}</b> / ${all}개 챙겼어요</p><span class="pk-pct${done === all ? ' full' : ''}">${done === all ? '다 챙겼어요!' : `${pct}%`}</span></div>
       <div class="pk-bar"><i style="width:${pct}%"></i></div>
-      <div class="pk-cats">${T.packing.map((sec, si) => {
+      ${packParts().map((part) => `<p class="pk-cats-h">${esc(part.label)}</p>
+      <div class="pk-cats">${part.list.map(({ sec, si }) => {
         const d = packDone(sec);
         const full = d === sec.items.length;
-        return `<a class="pk-cat${full ? ' full' : ''}" href="#pack" data-pack-jump="${si}"><span class="pk-ic" aria-hidden="true">${esc(sec.icon || '📦')}</span><span class="pk-n">${esc(sec.short || sec.title)}</span><span class="pk-c">${full ? '✓' : `${d}/${sec.items.length}`}</span></a>`;
-      }).join('')}</div>
+        return `<a class="pk-cat${full ? ' full' : ''}" href="#pack" data-pack-jump="${si}"><span class="pk-ic" aria-hidden="true">${esc(sec.icon || '📦')}</span><span class="pk-n">${esc(sec.short || sec.title)}</span><span class="pk-c">${full ? '✓' : `${d}/${sec.items.length}`}</span><i class="pk-mini" aria-hidden="true"><b style="width:${Math.round((d / sec.items.length) * 100)}%"></b></i></a>`;
+      }).join('')}</div>`).join('')}
       <label class="pk-hide"><input type="checkbox" data-pack-hide${packHide() ? ' checked' : ''}><span>챙긴 건 숨기기</span></label>
     </div>`;
   }
+  function packStepsHTML() {
+    const me = T.people.find((p) => p.name === savedName());
+    if (tripState().phase !== 'before' || !(T.packSteps || []).length || (me && me.group === 'b')) return ''; // 태오네 짐 이야기라 후발대에겐 안 보여요
+    return `<section class="block"><div class="card pk-steps">
+      <h2 class="pk-steps-h">짐 싸기 순서</h2>
+      <ol>${T.packSteps.map((x, i) => `<li><span class="pk-step-n">${i + 1}</span><span><b>${esc(x.when)}</b>${esc(x.what)}</span></li>`).join('')}</ol>
+      ${(T.packTips || []).length ? `<ul class="pk-tips">${T.packTips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+    </div></section>`;
+  }
 
   function renderPack() {
-    const sections = T.packing.map((sec, si) => {
+    const secHTML = ({ sec, si }) => {
       const items = sec.items.map((it, ii) => {
         const key = packKey(sec, it);
         const text = typeof it === 'string' ? it : it.t;
         const note = typeof it === 'string' ? '' : it.n;
+        const q = typeof it === 'string' ? '' : it.q;
         const id = `pk-${si}-${ii}`;
         return `<li${packState[key] ? ' class="is-done"' : ''}><label for="${id}">
           <input type="checkbox" id="${id}" data-key="${esc(key)}"${packState[key] ? ' checked' : ''}>
-          <span class="txt">${esc(text)}${note ? `<small>${esc(note)}</small>` : ''}</span>
+          <span class="txt"><span class="pk-row"><span class="pk-t">${esc(text)}</span>${q ? `<span class="pk-q">${esc(q)}</span>` : ''}</span>${note ? `<small>${esc(note)}</small>` : ''}</span>
         </label></li>`;
       }).join('');
       const done = packDone(sec);
@@ -1030,7 +1048,7 @@
         <div class="card pk-card">
           <div class="pk-head">
             <span class="pk-ic" aria-hidden="true">${esc(sec.icon || '📦')}</span>
-            <h2 class="pk-title">${esc(sec.title)}${sec.who ? `<span class="pk-who">${esc(sec.who)}</span>` : ''}</h2>
+            <div class="pk-hd"><h2 class="pk-title">${esc(sec.title)}${sec.who ? `<span class="pk-who">${esc(sec.who)}</span>` : ''}</h2>${sec.sub ? `<p class="pk-sub">${esc(sec.sub)}</p>` : ''}</div>
             <span class="count${done === sec.items.length ? ' full' : ''}">${done} / ${sec.items.length}</span>
           </div>
           ${sec.note ? `<p class="pk-note">${esc(sec.note)}</p>` : ''}
@@ -1038,7 +1056,8 @@
           <p class="pk-alldone">다 챙겼어요 ✓</p>
         </div>
       </section>`;
-    }).join('');
+    };
+    const sections = packParts().map((part) => `<h2 class="pk-part">${esc(part.label)}</h2>${part.list.map(secHTML).join('')}`).join('');
 
     return `<section class="block">
         <a class="back-link" href="#info">← 정보</a>
@@ -1047,6 +1066,7 @@
         <p class="lede">체크는 지금 보는 휴대폰에만 저장돼요. 각자 폰에서 체크하면 돼요.</p>
       </section>
       <section class="block" data-pack-sum>${packSummaryHTML()}</section>
+      ${packStepsHTML()}
       <div class="pk-list${packHide() ? ' hide-done' : ''}">${sections}</div>
       <section class="block"><button class="btn" type="button" id="pack-reset">체크 모두 지우기</button></section>`;
   }
