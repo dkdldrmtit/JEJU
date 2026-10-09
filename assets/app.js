@@ -331,6 +331,7 @@
       if (who && who.group === 'b' && b) { const n = dayDiff(today(), toDate(b.arrive.date)); if (n >= 2) add(3, `${call}, ${nights(n)} 자면 만나요!`); }
       if (has('move')) add(4, '제주에서 걸을 연습 중!');
       if (has('gyul')) add(3, '귤 모자 쓰고 갈래요!');
+      if (has('fly') && st.dday <= 3) add(4, '내 귀마개 챙겼어요?');
     }
 
     // 4. 요일 · 시간
@@ -384,9 +385,10 @@
         else if (kind === 'meal') { add(3, `${label}, 맛있게 먹어요!`); if (has('eat')) add(4, `${label}, 나도 한 입!`); }
         else if (kind === 'play') { add(3, '신난다! 놀러 가요'); if (has('play') || has('move')) add(4, '나도 같이 놀래요!'); }
         else if (kind === 'move') { add(3, '차 타고 슝~', '카시트에 잘 앉아 있어요'); if (has('dad')) add(4, '아빠 운전 최고!'); }
-        else if (kind === 'fly') { add(3, '비행기 슝~'); if (has('milk')) add(5, '쪽쪽 먹으면 귀 안 아파요'); if (has('up')) add(4, '나도 비행기처럼 슝!'); }
+        else if (kind === 'fly') { add(3, '비행기 슝~'); if (has('fly')) add(5, '귀마개 쓰니까 하나도 안 시끄러워요'); if (has('milk')) add(5, '쪽쪽 먹으면 귀 안 아파요'); if (has('up')) add(4, '나도 비행기처럼 슝!'); }
         else if (kind === 'rest') add(3, label.includes('짐') ? '짐 쌀 때 나도 넣어 줘요' : '쉬는 시간, 뒹굴뒹굴~');
       }
+      if (next && next[3] === 'fly' && has('fly')) add(5, '귀마개 쓰고 비행기 타러 가요!');
       if (next && !next[4] && next[3] !== 'rest') add(3, next[3] === 'fly' ? '곧 비행기 타요!' : `곧 ${next[2]}!`);
     }
 
