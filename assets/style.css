@@ -1427,17 +1427,6 @@ html.big .dt-d { font-size: 1.15rem; }
 html.calm .plan-panel.slide .day { animation: none; }
 .day.dayx { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 140px); }
 
-/* 민석 공지 띠 (모든 화면 맨 위) */
-.notice {
-  display: flex; align-items: flex-start; gap: 10px; margin: calc(env(safe-area-inset-top, 0px) + 12px) 0 -8px;
-  padding: 12px 10px 12px 14px; border-radius: 18px;
-  background: #FFF4E5; color: #5A3410; box-shadow: inset 0 0 0 1.5px #F6C58E;
-}
-.notice[hidden] { display: none; }
-.nt-ic { font-size: 1.15rem; line-height: 1.35; }
-.notice p { flex: 1; min-width: 0; font-size: var(--fs-base); line-height: 1.5; font-weight: 600; }
-.notice b { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .04em; color: var(--tangerine-ink); }
-.nt-x { appearance: none; border: 0; background: transparent; color: #8A5A2B; font-size: 1rem; padding: 4px 8px; cursor: pointer; border-radius: 10px; }
 
 /* 오늘의 한 장 (여행 중 홈) */
 .tph { appearance: none; font: inherit; cursor: pointer; display: block; width: 100%; padding: 0; border: 0; overflow: hidden; position: relative; aspect-ratio: 4 / 3; background: var(--sunken); }
@@ -1475,7 +1464,6 @@ html.calm .plan-panel.slide .day { animation: none; }
 .rc-polls li b { text-align: right; }
 
 /* 공지 올리기 (민석 폰에서만) */
-.me-notice { appearance: none; font: inherit; cursor: pointer; margin-left: auto; margin-right: 8px; padding: 7px 12px; border: 0; border-radius: 999px; background: #FFF4E5; color: var(--tangerine-ink); font-weight: 800; font-size: var(--fs-sm); box-shadow: inset 0 0 0 1.5px #F6C58E; }
 .nt-form { display: grid; gap: 12px; margin-top: 12px; }
 .nt-form textarea { min-height: 88px; }
 .nt-until { display: flex; gap: 8px; }
@@ -1694,3 +1682,24 @@ html.calm .pb.tbd, html.calm .pb-badge.on { animation: none; }
 .po-more[open] summary::after { content: "▴"; }
 /* 큰 글씨 모드: 6일 시간표는 칸이 좁아져 글자가 깨지므로 보통 크기로 유지 (지도와 같은 방식) */
 html.big .planner-card { zoom: calc(1 / 1.18); }
+
+/* 공지: 테두리 · 색 없이 흰 카드 한 장 (모든 화면 맨 위) */
+.notice {
+  display: flex; align-items: center; gap: 4px;
+  margin: 0 0 12px; padding: 4px 6px 4px 16px; min-height: 52px;
+  border-radius: 16px; background: var(--surface); color: var(--ink);
+}
+.notice[hidden] { display: none; }
+.nt-body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; padding: 11px 0; line-height: 1.45; }
+.nt-label { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 800; color: var(--muted); }
+.nt-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--tangerine); transform: translateY(-1px); }
+.nt-text { min-width: 0; font-size: var(--fs-base); font-weight: 700; letter-spacing: -.01em; word-break: keep-all; overflow-wrap: anywhere; }
+.nt-x, .nt-edit { appearance: none; flex: none; border: 0; background: none; cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
+.nt-x { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--muted); }
+.nt-x svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.nt-edit { padding: 10px 12px; border-radius: 12px; font-size: var(--fs-sm); font-weight: 700; color: var(--muted); }
+.nt-x:active, .nt-edit:active { background: var(--sunken); }
+/* 민석 폰: 공지가 없을 때만 '가+' 옆에 같은 모양의 동그란 단추 */
+.me-notice { appearance: none; border: 0; cursor: pointer; margin-left: auto; width: 40px; height: 40px; border-radius: 50%; background: var(--surface); color: var(--ink); display: grid; place-items: center; }
+.me-notice[hidden] { display: none; }
+.me-notice svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

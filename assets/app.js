@@ -2294,7 +2294,7 @@
       return `<div class="me-bar"><button type="button" class="me-name" data-who-open>누구세요? <b>고르기</b></button><button type="button" class="me-big${big ? ' on' : ''}" data-big aria-pressed="${big}" aria-label="큰 글씨">가<small>+</small></button></div>`;
     }
     return `<div class="me-bar"><button type="button" class="me-name" data-who-open aria-label="사람 바꾸기"><b>${esc(p.name)}</b>${p.name.length > 2 ? '' : '님'} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-      ${isAdmin() ? '<button type="button" class="me-notice" data-notice-open>📢 공지</button>' : ''}
+      ${isAdmin() ? `<button type="button" class="me-notice" data-notice-open aria-label="공지 올리기"${notice && notice.text ? ' hidden' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></button>` : ''}
       <button type="button" class="me-big${big ? ' on' : ''}" data-big aria-pressed="${big}" aria-label="큰 글씨 ${big ? '끄기' : '켜기'}">가<small>${big ? '−' : '+'}</small></button></div>`;
   }
 
@@ -2795,10 +2795,17 @@
   function fillNotice() {
     const n = notice || T.notice || null;
     const t = isoOf(today());
-    const show = n && n.text && (!n.until || t <= n.until) && store.get(NOTICE_KEY) !== n.text;
+    const live = n && n.text && (!n.until || t <= n.until);
+    // 민석 폰에선 닫아도 계속 보여서(눌러서 고치기) 따로 '공지' 단추가 필요 없음
+    const admin = typeof isAdmin === 'function' && isAdmin();
+    const show = live && (admin || store.get(NOTICE_KEY) !== n.text);
     noticeEl.hidden = !show;
+    document.querySelectorAll('.me-notice').forEach((b) => { b.hidden = Boolean(live); });
     if (!show) return;
-    noticeEl.innerHTML = `<span class="nt-ic" aria-hidden="true">📢</span><p><b>민석 공지</b>${esc(n.text)}</p><button type="button" class="nt-x" data-notice-x aria-label="공지 닫기">✕</button>`;
+    noticeEl.classList.toggle('is-admin', admin);
+    noticeEl.innerHTML = `<p class="nt-body"><span class="nt-label">공지</span><span class="nt-text">${esc(n.text)}</span></p>${admin
+      ? '<button type="button" class="nt-edit" data-notice-open>수정</button>'
+      : '<button type="button" class="nt-x" data-notice-x aria-label="공지 닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>'}`;
   }
   // 민석 폰에서만 '공지 올리기': 주소 끝에 ?admin=관리열쇠 를 붙여 한 번 열면 그 폰이 기억해요 (주소에서는 바로 지움)
   const ADMIN_KEY = 'jeju2026.admin';
