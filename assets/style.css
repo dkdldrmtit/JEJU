@@ -1738,3 +1738,30 @@ html.big .planner-card { zoom: calc(1 / 1.18); }
 }
 .pk-card .checklist li.is-done .pk-q { opacity: .45; }
 html.big .pk-q { font-size: .7rem; }
+
+/* =====================================================================
+   내가 쓴 의견 고치기 · 지우기, 민석 폰에서 일정 고치기
+   ===================================================================== */
+.fb-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fb-own { display: inline-flex; gap: 2px; flex: none; }
+.fb-own button, .ss-del {
+  appearance: none; font: inherit; cursor: pointer; border: 0; background: none;
+  padding: 4px 6px; border-radius: 8px; color: var(--muted); font-size: .72rem; font-weight: 700;
+}
+.fb-own button:active, .ss-del:active { background: var(--sunken); }
+.fb-own button[data-fb-del], .ss-del { color: #C2410C; }
+.ss-del { margin-left: auto; }
+.blk-cms li .ss-del { float: right; margin: -4px -6px 0 0; }
+.fb-item.is-editing .fb-edit { margin-top: 8px; display: grid; gap: 8px; }
+
+.it-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.it-ed { color: var(--ink); }
+.add-item {
+  appearance: none; font: inherit; cursor: pointer; width: 100%; margin-top: 10px; padding: 11px 12px;
+  border: 1.5px dashed var(--line); border-radius: 14px; background: none; color: var(--muted); font-size: var(--fs-sm); font-weight: 700;
+}
+.add-item:active { background: var(--sunken); }
+.ie-form { display: grid; gap: 8px; margin-top: 4px; }
+.ie-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 8px; }
+.ie-row > div { display: grid; gap: 8px; }
+.ie-hint { font-size: .75rem; color: var(--muted); line-height: 1.45; }

@@ -3,7 +3,8 @@
  * 구글 시트에 붙여서 '웹 앱'으로 배포하면, 사이트에서 로그인 없이 쓸 수 있어요.
  * 설정 방법은 backend/README.md 를 보세요.
  *
- * 시트 '의견' 열: id | ts | name | day | text | link | ai | aiLink | hidden
+ * 시트 '의견' 열: id | ts | name | day | text | link | ai | aiLink | hidden | owner
+ *  - owner 는 글쓴 휴대폰만 아는 표시예요. 그 폰(또는 관리 열쇠)만 그 의견을 고치거나 지울 수 있어요.
  *  - hidden 칸에 아무 글자나 적으면 사이트에서 숨겨져요 (지우고 싶은 의견).
  *  - ai / aiLink 칸은 AI가 조사해서 채워요 (AI_TOKEN 이 맞아야 쓸 수 있음).
  * 시트 '투표' 열: poll | option | name | ts        (한 사람이 한 후보에 한 번, 다시 누르면 취소)
@@ -13,10 +14,12 @@
  *  - hidden 칸에 아무 글자나 적으면 사이트에서 숨겨져요.
  * 시트 '공지' : A2 칸에 적은 글이 사이트 맨 위에 띠로 떠요 (B2 에 날짜를 적으면 그날까지만).
  *  - 사이트의 '공지 올리기'로도 바뀌어요. 이때는 관리 열쇠(스크립트 속성 NOTICE_KEY, 없으면 AI_TOKEN)가 맞아야 해요.
+ * 시트 '일정수정' : A2 칸에 사이트에서 고친 일정이 저장돼요 (관리 열쇠가 있는 폰에서만 고칠 수 있어요).
+ *  - A2 칸을 비우면 사이트 일정이 원래대로 돌아가요.
  */
-const VERSION = 5;
+const VERSION = 6;
 const SHEET_NAME = '의견';
-const HEAD = ['id', 'ts', 'name', 'day', 'text', 'link', 'ai', 'aiLink', 'hidden'];
+const HEAD = ['id', 'ts', 'name', 'day', 'text', 'link', 'ai', 'aiLink', 'hidden', 'owner'];
 const VOTE_SHEET = '투표';
 const VOTE_HEAD = ['poll', 'option', 'name', 'ts'];
 const PHOTO_SHEET = '사진';
@@ -24,6 +27,14 @@ const PHOTO_HEAD = ['id', 'ts', 'name', 'day', 'fileId', 'w', 'h', 'hidden'];
 const PHOTO_FOLDER = '제주여행 사진첩';
 const NOTICE_SHEET = '공지';
 const NOTICE_HEAD = ['공지 (A2 칸에 적으면 사이트 맨 위에 떠요)', '언제까지 (예: 2026-10-14, 비우면 계속)'];
+const PLAN_SHEET = '일정수정';
+const PLAN_HEAD = ['사이트에서 고친 일정 (A2 · 비우면 원래대로)'];
+
+function plan_() {
+  const v = String(sheetOf_(PLAN_SHEET, PLAN_HEAD).getRange(2, 1).getValue() || '').trim();
+  if (!v) return null;
+  try { return JSON.parse(v); } catch (err) { return null; }
+}
 
 function notice_() {
   const sh = sheetOf_(NOTICE_SHEET, NOTICE_HEAD);
@@ -60,6 +71,7 @@ const iso_ = (v) => (v instanceof Date ? v.toISOString() : String(v));
 const day_ = (v) => (v instanceof Date ? Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd') : String(v || ''));
 const prop_ = (k) => PropertiesService.getScriptProperties().getProperty(k);
 const photoOk_ = (key) => { const k = prop_('PHOTO_KEY'); return Boolean(k) && String(key || '') === k; };
+const adminOk_ = (key) => { const k = prop_('NOTICE_KEY') || prop_('AI_TOKEN'); return Boolean(k) && String(key || '') === k; };
 
 function votes_() {
   const rows = sheetOf_(VOTE_SHEET, VOTE_HEAD).getDataRange().getValues().slice(1);
@@ -111,7 +123,7 @@ function doGet(e) {
       name: String(r[2]), day: day_(r[3]), text: String(r[4]).replace(/^'/, ''), link: String(r[5]),
       ai: String(r[6]).replace(/^'/, ''), aiLink: String(r[7]),
     }));
-  return out_({ v: VERSION, items, votes: votes_(), photosOn: Boolean(prop_('PHOTO_KEY')), notice: notice_() });
+  return out_({ v: VERSION, items, votes: votes_(), photosOn: Boolean(prop_('PHOTO_KEY')), notice: notice_(), plan: plan_() });
 }
 
 function doPost(e) {
@@ -155,9 +167,15 @@ function handle_(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
+    if (body.action === 'plan') {
+      if (!adminOk_(body.key)) return out_({ ok: false, error: 'unauthorized' });
+      const txt = body.plan ? JSON.stringify(body.plan) : '';
+      if (txt.length > 45000) return out_({ ok: false, error: 'too big' });
+      sheetOf_(PLAN_SHEET, PLAN_HEAD).getRange(2, 1).setValue(txt);
+      return out_({ ok: true, plan: plan_() });
+    }
     if (body.action === 'notice') {
-      const key = prop_('NOTICE_KEY') || prop_('AI_TOKEN');
-      if (!key || body.key !== key) return out_({ ok: false, error: 'unauthorized' });
+      if (!adminOk_(body.key)) return out_({ ok: false, error: 'unauthorized' });
       const text = clean_(body.text, 200);
       const until = /^\d{4}-\d{2}-\d{2}$/.test(String(body.until || '')) ? body.until : '';
       sheetOf_(NOTICE_SHEET, NOTICE_HEAD).getRange(2, 1, 1, 2).setValues([[text, until]]);
@@ -171,8 +189,28 @@ function handle_(body) {
       const link = /^https?:\/\//.test(String(body.link || '')) ? clean_(body.link, 500) : '';
       const day = /^\d{4}-\d{2}-\d{2}$/.test(String(body.day || '')) ? body.day : '';
       const id = Utilities.getUuid().slice(0, 8);
-      sh.appendRow([id, new Date(), clean_(body.name, 20), day, text, link, '', '', '']);
+      if (!sh.getRange(1, 10).getValue()) sh.getRange(1, 10).setValue('owner');
+      sh.appendRow([id, new Date(), clean_(body.name, 20), day, text, link, '', '', '', clean_(body.owner, 40)]);
       return out_({ ok: true, id });
+    }
+    if (body.action === 'del' || body.action === 'edit') {
+      // 쓴 휴대폰(owner) 이나 관리 열쇠가 맞을 때만
+      const rows = sh.getDataRange().getValues();
+      for (let i = 1; i < rows.length; i += 1) {
+        if (String(rows[i][0]) !== String(body.id)) continue;
+        const owner = String(rows[i][9] || '');
+        if (!adminOk_(body.key) && !(owner && String(body.owner || '') === owner)) return out_({ ok: false, error: 'unauthorized' });
+        if (body.action === 'del') {
+          sh.getRange(i + 1, 9).setValue('사이트에서 지움 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'MM-dd HH:mm'));
+          return out_({ ok: true });
+        }
+        const text = clean_(body.text, 500);
+        if (!text) return out_({ ok: false, error: 'empty' });
+        sh.getRange(i + 1, 5).setValue(text);
+        sh.getRange(i + 1, 7, 1, 2).setValues([['', '']]); // 내용이 바뀌었으니 AI가 다시 봐요
+        return out_({ ok: true });
+      }
+      return out_({ ok: false, error: 'not found' });
     }
     if (body.action === 'annotate') {
       const token = prop_('AI_TOKEN');

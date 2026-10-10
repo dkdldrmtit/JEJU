@@ -112,6 +112,41 @@
     const label = g ? (who === 'a' ? '태오네' : who === 'b' ? '후발대' : g.name) : membersOf(who).map((p) => p.name).join('·');
     return `<span class="wtag ${typeof who === 'string' ? esc(who) : 'p'}">${esc(label)}</span>`;
   }
+  /* ---------- 사이트에서 고친 일정 (민석 폰에서만 고칠 수 있어요 · 구글 시트 '일정수정'에 저장) ----------
+     trip.js 일정은 그대로 두고, 고친 것 · 뺀 것 · 더한 것만 위에 덮어써요 */
+  const itemKey = (it) => `${it.time || it.when || ''}|${it.title}`;
+  const BASE_ITEMS = T.days.map((d) => (d.items || []).map((it) => ({ ...it, _k: itemKey(it) })));
+  const BASE_HAD = T.days.map((d) => Array.isArray(d.items));
+  let planEdits = null;
+  const pickItem = (e) => {
+    const o = {};
+    ['time', 'when', 'title', 'note', 'status'].forEach((k) => { if (e[k] !== undefined) o[k] = e[k]; });
+    if (o.time === '') o.time = null;
+    return o;
+  };
+  function applyPlan() {
+    const E = (planEdits && planEdits.edits) || {};
+    const A = (planEdits && planEdits.adds) || [];
+    T.days.forEach((d, i) => {
+      const list = [];
+      BASE_ITEMS[i].forEach((it) => {
+        const e = E[`${d.date}|${it._k}`];
+        if (e && e.del) return;
+        list.push(e ? { ...it, ...pickItem(e), _edited: true } : { ...it });
+      });
+      A.filter((a) => a.date === d.date && a.title).forEach((a) => list.push({ ...pickItem(a), _add: a.uid }));
+      // 시간 순으로 · 시간이 없는 일정은 바로 앞 일정 뒤에 그대로
+      let last = '';
+      const keyed = list.map((it, j) => { if (it.time) last = it.time; return { it, k: it.time || last, j }; });
+      keyed.sort((x, y) => (x.k < y.k ? -1 : x.k > y.k ? 1 : x.j - y.j));
+      if (list.length || BASE_HAD[i]) d.items = keyed.map((x) => x.it);
+      else delete d.items;
+    });
+  }
+  try { const c = JSON.parse(localStorage.getItem('jeju2026.fbcache') || 'null'); if (c && c.plan) planEdits = c.plan; } catch (e) { /* 무시 */ }
+  applyPlan(); // 고친 게 없어도 한 번 돌려서 일정마다 고치기용 표시(_k)를 붙여요
+  const editKeyOf = (it) => (it._add ? `+${it._add}` : it._k);
+
   const norm = (x) => String(x || '').replace(/[\s·()]/g, '');
   function daySlots(day) {
     const items = (day.items || []).map((it) => ({ ...it }));
@@ -135,10 +170,10 @@
     return `<ul class="slot-sug">${list.map((x) => {
       const m = String(x.text).match(/^📍\s*([^·\n]+)/);
       const what = m ? m[1].trim() : String(x.text).replace(/^\d+일 [\d:~]+ \([^)]*\):\s*/, '').slice(0, 40);
-      return `<li><span class="ss-n">${esc(x.name || '가족')}</span><b>${esc(what)}</b>${x.link ? `<a href="${esc(/naver/.test(x.link) ? x.link : naverOf(what))}" target="_blank" rel="noopener">지도</a>` : ''}${x.ai ? '<em>AI 답 ✓</em>' : ''}</li>`;
+      return `<li><span class="ss-n">${esc(x.name || '가족')}</span><b>${esc(what)}</b>${x.link ? `<a href="${esc(/naver/.test(x.link) ? x.link : naverOf(what))}" target="_blank" rel="noopener">지도</a>` : ''}${x.ai ? '<em>AI 답 ✓</em>' : ''}${canEditFb(x) ? `<button type="button" class="ss-del" data-fb-del="${esc(x.id)}" aria-label="이 제안 지우기">삭제</button>` : ''}</li>`;
     }).join('')}</ul>`;
   }
-  function slotRowHTML(it, day) {
+  function slotRowHTML(it, day, ek) {
     const S = it.slot;
     const meal = S.kind === 'meal';
     const poll = (T.polls || []).find((p) => p.day === day.date && (meal ? p.kind !== 'course' : p.kind === 'course') && today() <= toDate(p.closes));
@@ -154,6 +189,7 @@
             ${poll ? `<a class="slot-btn vote" href="#ideas" data-goto="polls">${poll.kind === 'course' ? ICON.route : ICON.meal}<span>투표하러 가기</span></a>` : ''}
             <button type="button" class="slot-btn find" data-place-find="${esc(day.date)}|${esc(S.start)}|${esc(S.end)}|${esc(S.label)}|${esc(S.kind)}">🔍 ${meal ? '먹을 곳' : '갈 곳'} 찾아서 제안</button>
             <button type="button" class="slot-btn ghost" data-slot="${esc(day.date)}|${esc(S.start)}|${esc(S.end)}|${esc(S.label)}">글로 남기기</button>
+            ${ek ? `<button type="button" class="slot-btn ghost" data-edit-item="${esc(ek)}">✎ 고치기</button>` : ''}
           </div>
           ${slotSuggestHTML(day.date, S)}
         </div>
@@ -164,7 +200,7 @@
     if (!time) return -1;
     return (day.blocks || []).findIndex((b) => b[0] <= time && time < b[1]);
   }
-  function itemHTML(it, present, blk) {
+  function itemHTML(it, present, blk, ek) {
     const hasTime = Boolean(it.time);
     const status = it.status || 'ok';
     const note = it.note || '';
@@ -176,7 +212,7 @@
           <p class="title">${esc(it.title)}${status !== 'ok' ? ` ${pill(status)}` : ''}${whoTag(it.who, present)}</p>
           ${note ? `<p class="note">${esc(note)}</p>${long ? '<span class="note-more" aria-hidden="true">더보기</span>' : ''}` : ''}
         </div>${it.place ? naverSide(it.place) : ''}</div>
-        ${blk ? `<button type="button" class="it-rx" data-blk="${blk}">반응 · 의견<i class="pb-badge" data-blk-badge="${blk}"></i></button>` : ''}
+        ${blk || ek ? `<div class="it-acts">${blk ? `<button type="button" class="it-rx" data-blk="${blk}">반응 · 의견<i class="pb-badge" data-blk-badge="${blk}"></i></button>` : ''}${ek ? `<button type="button" class="it-rx it-ed" data-edit-item="${esc(ek)}">✎ 고치기</button>` : ''}</div>` : ''}
         ${photoOf(it.photo) ? `<figure class="item-photo"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
       </div>
     </li>`;
@@ -201,6 +237,7 @@
     const hasRoute = (day.route || []).length > 1;
     const present = T.groups.filter((g) => day.date >= g.arrive.date && day.date <= g.depart.date).map((g) => g.id);
     const rows = daySlots(day);
+    const admin = isAdmin();
     return `<article class="day dayx${isToday ? ' is-today' : ''}" id="day-${day.date}" style="--dc:var(--d${i + 1})">
       <div class="day-body">
         <p class="dx-date"><b>${md(day.date)}</b> ${wd(day.date)}요일 <span class="dx-n">DAY ${i + 1}</span>${isToday ? '<span class="stub-today">오늘</span>' : ''}</p>
@@ -210,7 +247,8 @@
           ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선 지도</span></button>` : ''}
         </div>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
-        ${rows.length ? `<ol class="items">${rows.map((it) => { if (it.slot) return slotRowHTML(it, day); const bk = blockAt(day, it.time); return itemHTML(it, present, bk >= 0 ? `${i}|${bk}` : ''); }).join('')}</ol>` : ''}
+        ${rows.length ? `<ol class="items">${rows.map((it) => { const ek = admin && !it.synthetic ? `${i}:${encodeURIComponent(editKeyOf(it))}` : ''; if (it.slot) return slotRowHTML(it, day, ek); const bk = blockAt(day, it.time); return itemHTML(it, present, bk >= 0 ? `${i}|${bk}` : '', ek); }).join('')}</ol>` : ''}
+        ${admin ? `<button type="button" class="add-item" data-add-item="${i}">＋ 일정 추가 · 고친 건 모두에게 보여요</button>` : ''}
         ${day.open && !rows.some((r) => r.slot) ? `<p class="empty-slot">${esc(day.open)}</p>` : ''}
         ${pollDayHTML(day)}
         <div class="fb" data-fb-day="${day.date}"></div>
@@ -1355,6 +1393,18 @@
   const fbDays = () => T.days.filter((d) => d.open).map((d) => d.date);
   const savedName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } };
   const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* 무시 */ } };
+  // 내가 쓴 의견: 이 폰만 아는 표시(owner)를 같이 보내 두면, 이 폰에서 고치거나 지울 수 있어요
+  const OWNER_KEY = 'jeju2026.owner';
+  const MINE_KEY = 'jeju2026.mine';
+  function myOwner() {
+    let o = store.get(OWNER_KEY);
+    if (!o) { o = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); store.set(OWNER_KEY, o); }
+    return o;
+  }
+  const mineIds = () => { try { return JSON.parse(store.get(MINE_KEY) || '[]'); } catch (e) { return []; } };
+  const addMine = (id) => { if (id) store.set(MINE_KEY, JSON.stringify(mineIds().concat(String(id)).slice(-200))); };
+  const canEditFb = (it) => Boolean(it && it.id) && (isAdmin() || mineIds().includes(String(it.id)));
+  let fbEditing = null; // 고치는 중인 의견 id
 
   function ago(ts) {
     const t = new Date(ts);
@@ -1406,8 +1456,19 @@
       aiBox = `<div class="fb-ai"><span class="fb-ai-tag">✦ AI가 찾아봤어요</span>${aiHTML(it.ai)}${
         /^https?:\/\//.test(al) ? `<a class="fb-link" href="${esc(al)}" target="_blank" rel="noopener">자세히 · ${esc(hostOf(al))}</a>` : naverLink(al, true)}</div>`;
     } else if (FB.aiOn) aiBox = '<p class="fb-ai-wait">✦ AI가 곧 찾아볼게요</p>';
+    const own = canEditFb(it);
+    if (own && fbEditing === String(it.id)) {
+      return `<li class="fb-item is-editing">
+      <p class="fb-meta"><b>${esc(it.name || '누군가')}</b> · 고치는 중</p>
+      <form class="fb-edit" data-fb-edit-form="${esc(it.id)}">
+        <textarea name="t" class="fb-input" rows="3" maxlength="500" required>${esc(it.text)}</textarea>
+        <div class="fb-actions"><button type="submit" class="btn primary">저장</button><button type="button" class="btn" data-fb-edit-cancel>취소</button></div>
+        <p class="fb-status" role="status"></p>
+      </form>
+    </li>`;
+    }
     return `<li class="fb-item">
-      <p class="fb-meta"><b>${esc(it.name || '누군가')}</b>${showDay && it.day ? ` · ${esc(`${dom(it.day)}일`)}` : ''} · ${esc(ago(it.ts))}</p>
+      <div class="fb-meta-row"><p class="fb-meta"><b>${esc(it.name || '누군가')}</b>${showDay && it.day ? ` · ${esc(`${dom(it.day)}일`)}` : ''} · ${esc(ago(it.ts))}</p>${own ? `<span class="fb-own"><button type="button" data-fb-edit="${esc(it.id)}">수정</button><button type="button" data-fb-del="${esc(it.id)}">삭제</button></span>` : ''}</div>
       <p class="fb-text">${esc(it.text)}</p>
       ${safeLink ? `<a class="fb-link" href="${esc(safeLink)}" target="_blank" rel="noopener">링크 열기 · ${esc(hostOf(safeLink))}</a>` : ''}
       ${aiBox}
@@ -1481,6 +1542,11 @@
       }).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
       backendV = data.v || 1;
       notice = data.notice || null;
+      if (JSON.stringify(data.plan || null) !== JSON.stringify(planEdits)) {
+        planEdits = data.plan || null;
+        applyPlan();
+        if (['plan', 'home'].includes(currentTab())) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+      }
       if (data.votes) votes = data.votes;
       photosOn = Boolean(data.photosOn);
     } catch (e) {
@@ -1521,6 +1587,65 @@
     if (e.target.closest('[data-fb-cancel]')) { fbOpen = null; fillFeedback(); }
   });
 
+  // 의견 고치기 · 지우기 (쓴 폰이나 민석 폰에서만 단추가 보여요)
+  async function fbChange(action, id, text) {
+    const res = await fetch(FB.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, id, text, owner: myOwner(), key: isAdmin() ? store.get(ADMIN_KEY) : '' }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'fail');
+  }
+  const fbFailMsg = (err) => (String(err && err.message) === 'unknown action' ? '구글 시트 코드를 새 버전(v6)으로 배포해 주세요'
+    : String(err && err.message) === 'unauthorized' ? '이 휴대폰에서 쓴 의견만 고칠 수 있어요' : '인터넷 연결을 확인하고 다시 해 주세요');
+  function refreshFbViews() {
+    fillFeedback();
+    if (currentTab() === 'plan') refreshPlanPanel();
+    fillBlockBadges();
+    if (typeof fillBlockSheet === 'function' && !wxSheet.hidden && wxSheet.querySelector('.blk-panel')) fillBlockSheet();
+  }
+  document.addEventListener('click', async (e) => {
+    const ed = e.target.closest('[data-fb-edit]');
+    if (ed) { fbEditing = ed.dataset.fbEdit; refreshFbViews(); const ta = document.querySelector(`[data-fb-edit-form="${CSS.escape(fbEditing)}"] textarea`); if (ta) ta.focus(); return; }
+    if (e.target.closest('[data-fb-edit-cancel]')) { fbEditing = null; refreshFbViews(); return; }
+    const del = e.target.closest('[data-fb-del]');
+    if (!del) return;
+    const id = del.dataset.fbDel;
+    const it = (fbItems || []).find((x) => String(x.id) === id);
+    if (!window.confirm(`이 의견을 지울까요?\n\n"${it ? it.text.slice(0, 60) : ''}"`)) return;
+    del.disabled = true;
+    try {
+      await fbChange('del', id);
+      fbItems = (fbItems || []).filter((x) => String(x.id) !== id);
+      refreshFbViews();
+      toast('지웠어요');
+    } catch (err) {
+      del.disabled = false;
+      toast(fbFailMsg(err));
+    }
+  });
+  document.addEventListener('submit', async (e) => {
+    const f = e.target.closest('[data-fb-edit-form]');
+    if (!f) return;
+    e.preventDefault();
+    const id = f.dataset.fbEditForm;
+    const text = String(new FormData(f).get('t') || '').trim();
+    const st = f.querySelector('.fb-status');
+    if (!text) { st.textContent = '내용을 적어 주세요'; return; }
+    st.textContent = '저장하는 중…';
+    try {
+      await fbChange('edit', id, text);
+      const it = (fbItems || []).find((x) => String(x.id) === id);
+      if (it) { it.text = text; it.ai = ''; it.aiLink = ''; }
+      fbEditing = null;
+      refreshFbViews();
+      toast('고쳤어요');
+    } catch (err) {
+      st.textContent = fbFailMsg(err);
+    }
+  });
+
   view.addEventListener('submit', async (e) => {
     const form = e.target.closest('.fb-form');
     if (!form) return;
@@ -1543,10 +1668,11 @@
       const res = await fetch(FB.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'add', name, day, text, link, website: fd.get('website') || '' }),
+        body: JSON.stringify({ action: 'add', name, day, text, link, website: fd.get('website') || '', owner: myOwner() }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'fail');
+      addMine(data.id);
       fbItems = [{ id: data.id, ts: new Date().toISOString(), name, day, text, link }].concat(fbItems || []);
       fbOpen = null;
       fillFeedback();
@@ -2664,7 +2790,7 @@
     }).join('')}</div>
       ${Object.values(r).some((a) => a.length) ? `<p class="rx-who">${rxList(B.kind).filter(([k]) => (r[k] || []).length).map(([k, e]) => `${e} ${esc(r[k].join(' · '))}`).join('<br>')}</p>` : '<p class="rx-who">처음으로 반응을 남겨 보세요</p>'}`;
     const cms = blkComments(B);
-    cmEl.innerHTML = cms.length ? `<ul class="blk-cms">${cms.map((x) => `<li><b>${esc(x.name || '가족')}</b><p>${esc(String(x.text).replace(/^\d+일 [\d:]+~[\d:]+ \([^)]*\):\s*/, ''))}</p>${x.ai ? `<p class="blk-ai">✦ ${esc(String(x.ai).split('\n')[0])}</p>` : ''}</li>`).join('')}</ul>` : '<p class="blk-empty">아직 이야기가 없어요</p>';
+    cmEl.innerHTML = cms.length ? `<ul class="blk-cms">${cms.map((x) => `<li><b>${esc(x.name || '가족')}</b>${canEditFb(x) ? `<button type="button" class="ss-del" data-fb-del="${esc(x.id)}" aria-label="이 이야기 지우기">삭제</button>` : ''}<p>${esc(String(x.text).replace(/^\d+일 [\d:]+~[\d:]+ \([^)]*\):\s*/, ''))}</p>${x.ai ? `<p class="blk-ai">✦ ${esc(String(x.ai).split('\n')[0])}</p>` : ''}</li>`).join('')}</ul>` : '<p class="blk-empty">아직 이야기가 없어요</p>';
   }
   async function toggleRx(k) {
     const B = blkOpen && blkInfo(blkOpen);
@@ -2696,9 +2822,10 @@
     const text = `${dom(B.day.date)}일 ${B.start}~${B.end} (${String(B.label).replace(/\s*\(미정\)/, '')}): ${t}`;
     st.textContent = '올리는 중…';
     try {
-      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'add', name, day: B.day.date, text, link: '', website: '' }) });
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'add', name, day: B.day.date, text, link: '', website: '', owner: myOwner() }) });
       const data = await res.json();
       if (!data.ok) throw new Error('fail');
+      addMine(data.id);
       fbItems = [{ id: data.id, ts: new Date().toISOString(), name, day: B.day.date, text, link: '', ai: '', aiLink: '' }].concat(fbItems || []);
       form.reset();
       st.textContent = '남겼어요 · AI가 한 시간 안에 확인해요';
@@ -2853,9 +2980,10 @@
     st.textContent = '올리는 중…';
     try {
       const name = savedName() || '가족';
-      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'add', name, day: date, text, link: r.url, website: '' }) });
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'add', name, day: date, text, link: r.url, website: '', owner: myOwner() }) });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'fail');
+      addMine(data.id);
       fbItems = [{ id: data.id, ts: new Date().toISOString(), name, day: date, text, link: r.url, ai: '', aiLink: '' }].concat(fbItems || []);
       closeWxSheet();
       fillFeedback();
@@ -3008,6 +3136,110 @@
   });
   wxSheet.addEventListener('click', (e) => { if (e.target.closest('[data-notice-clear]')) sendNotice('', ''); });
   document.addEventListener('click', (e) => { if (e.target.closest('[data-notice-open]')) openNoticeSheet(); });
+
+  /* ---------- 일정 고치기 · 더하기 · 빼기 (민석 폰에서만) ---------- */
+  let itemEditing = null; // { i: 날짜 번호, key: 고칠 일정 (없으면 새로 추가) }
+  function openItemSheet(i, key) {
+    const d = T.days[i];
+    if (!d) return;
+    const it = key ? (d.items || []).find((x) => editKeyOf(x) === key) : null;
+    if (key && !it) { toast('그 일정을 찾지 못했어요 · 새로고침해 주세요'); return; }
+    itemEditing = { i, key };
+    const tv = it ? (it.time || it.when || '') : '';
+    const st = it ? (it.status || 'ok') : 'plan';
+    wxSheet.innerHTML = `<div class="sheet-panel ie-panel" tabindex="-1">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="ws-head"><div><p class="ws-day">${esc(mdw(d.date))} · 민석 폰에서만 보여요</p><p class="ws-main"><b>${it ? '일정 고치기' : '일정 추가'}</b></p></div><button type="button" class="sheet-x" data-sheet-close aria-label="닫기">×</button></div>
+      <form class="ie-form" data-item-form>
+        <div class="ie-row">
+          <div class="ie-time"><label class="fb-label" for="ie-time">시간</label><input id="ie-time" name="time" class="fb-input" value="${esc(tv)}" placeholder="15:30" maxlength="12" autocomplete="off"></div>
+          <div class="ie-title"><label class="fb-label" for="ie-title">할 일</label><input id="ie-title" name="title" class="fb-input" value="${esc(it ? it.title : '')}" maxlength="60" required placeholder="예: 야식 사 오기" autocomplete="off"></div>
+        </div>
+        <label class="fb-label" for="ie-note">메모 <small>(선택)</small></label>
+        <textarea id="ie-note" name="note" class="fb-input" rows="3" maxlength="300" placeholder="장소 · 준비할 것 · 누가 가는지">${esc(it ? it.note || '' : '')}</textarea>
+        <p class="fb-label">상태</p>
+        <div class="nt-until">${[['ok', '확정'], ['plan', '예정'], ['tbd', '정하는 중']].map(([v, l]) => `<label><input type="radio" name="status" value="${v}"${v === st ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
+        <div class="nt-btns"><button type="submit" class="btn primary">${it ? '저장' : '추가'}</button>${it ? '<button type="button" class="btn" data-item-del>일정에서 빼기</button>' : ''}${it && it._edited ? '<button type="button" class="btn" data-item-reset>원래대로</button>' : ''}</div>
+        <p class="ie-hint">시간은 15:30 처럼 적거나 '오후' · '저녁' 처럼 적어도 돼요. 저장하면 가족 모두의 화면에 보여요.</p>
+        <p class="fb-status" data-ie-status aria-live="polite"></p>
+      </form>
+    </div>`;
+    wxSheet.hidden = false;
+    document.documentElement.classList.add('lb-open');
+    requestAnimationFrame(() => wxSheet.classList.add('in'));
+    const t = wxSheet.querySelector(it ? '#ie-title' : '#ie-time');
+    if (t) t.focus({ preventScroll: true });
+  }
+  async function savePlan(mutate, okMsg) {
+    const stEl = wxSheet.querySelector('[data-ie-status]');
+    const next = JSON.parse(JSON.stringify(planEdits || {}));
+    next.edits = next.edits || {};
+    next.adds = next.adds || [];
+    mutate(next);
+    if (stEl) stEl.textContent = '저장하는 중…';
+    wxSheet.querySelectorAll('.ie-form button').forEach((b) => { b.disabled = true; });
+    try {
+      const res = await fetch(FB.endpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'plan', key: store.get(ADMIN_KEY), plan: next }) });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'fail');
+      planEdits = data.plan || next;
+      try { const c = JSON.parse(localStorage.getItem(FB_CACHE) || '{}') || {}; c.plan = planEdits; localStorage.setItem(FB_CACHE, JSON.stringify(c)); } catch (e) { /* 무시 */ }
+      applyPlan();
+      closeWxSheet();
+      const y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+      toast(okMsg);
+    } catch (err) {
+      wxSheet.querySelectorAll('.ie-form button').forEach((b) => { b.disabled = false; });
+      const m = String(err && err.message);
+      if (stEl) stEl.textContent = m === 'unauthorized' ? '관리 열쇠가 맞지 않아요 (관리 주소로 한 번 다시 열어 주세요)' : m === 'unknown action' ? '구글 시트 코드를 새 버전(v6)으로 배포해 주세요' : m === 'too big' ? '고친 게 너무 많아요 · 민석에게 말해 주세요' : '저장하지 못했어요 · 인터넷 연결을 확인해 주세요';
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const ed = e.target.closest('[data-edit-item]');
+    if (ed) {
+      const [i, k] = ed.dataset.editItem.split(':');
+      openItemSheet(Number(i), decodeURIComponent(k));
+      return;
+    }
+    const ad = e.target.closest('[data-add-item]');
+    if (ad) openItemSheet(Number(ad.dataset.addItem), null);
+  });
+  wxSheet.addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-item-form]');
+    if (!f || !itemEditing) return;
+    e.preventDefault();
+    const fd = new FormData(f);
+    const tv = String(fd.get('time') || '').trim();
+    const title = String(fd.get('title') || '').trim();
+    if (!title) { wxSheet.querySelector('[data-ie-status]').textContent = '할 일을 적어 주세요'; return; }
+    const tm = /^(\d{1,2})\s*[:시.]\s*(\d{2})?\s*분?$/.exec(tv);
+    const time = tm && Number(tm[1]) < 24 ? `${tm[1].padStart(2, '0')}:${tm[2] || '00'}` : null;
+    const fields = { time, when: time ? '' : tv, title, note: String(fd.get('note') || '').trim(), status: String(fd.get('status') || 'plan') };
+    const { i, key } = itemEditing;
+    const date = T.days[i].date;
+    savePlan((P) => {
+      if (!key) P.adds.push({ uid: Math.random().toString(36).slice(2, 10), date, ...fields });
+      else if (key[0] === '+') { const a = P.adds.find((x) => x.uid === key.slice(1)); if (a) Object.assign(a, fields); }
+      else P.edits[`${date}|${key}`] = fields;
+    }, key ? '고쳤어요 · 가족 모두에게 보여요' : '추가했어요 · 가족 모두에게 보여요');
+  });
+  wxSheet.addEventListener('click', (e) => {
+    if (!itemEditing) return;
+    const { i, key } = itemEditing;
+    if (!key) return;
+    const date = T.days[i] && T.days[i].date;
+    if (e.target.closest('[data-item-del]')) {
+      if (!window.confirm('이 일정을 빼고 가족 모두의 화면에서 안 보이게 할까요?')) return;
+      savePlan((P) => {
+        if (key[0] === '+') P.adds = P.adds.filter((x) => x.uid !== key.slice(1));
+        else P.edits[`${date}|${key}`] = { del: true };
+      }, '일정에서 뺐어요');
+    } else if (e.target.closest('[data-item-reset]')) {
+      savePlan((P) => { delete P.edits[`${date}|${key}`]; }, '원래 일정으로 돌렸어요');
+    }
+  });
 
   noticeEl.addEventListener('click', (e) => {
     if (!e.target.closest('[data-notice-x]')) return;
