@@ -1798,3 +1798,10 @@ button.pb { font-size: .74rem; }
 @media (max-width: 360px) { .pb, button.pb { font-size: .7rem; } .pb small { display: block; } }
 /* 오른쪽 끝에 '더 있어요' 그림자 */
 .planner-card::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 18px; pointer-events: none; z-index: 5; background: linear-gradient(to left, var(--surface), transparent); border-radius: 0 var(--r-lg, 22px) var(--r-lg, 22px) 0; }
+/* 후보 카드 안 목록 (범준 맛집 지도 · 추천 코스) */
+.idea-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.idea-list li { display: grid; grid-template-columns: 6.6em minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: var(--fs-sm); line-height: 1.5; }
+.idea-list b { font-weight: 800; word-break: keep-all; }
+.idea-list span { display: flex; flex-wrap: wrap; gap: 6px; color: var(--muted); word-break: keep-all; }
+.idea-list a { padding: 3px 10px; border-radius: 999px; background: var(--sunken); color: var(--ink); font-weight: 700; text-decoration: none; font-size: .8rem; }
+.idea-list a:active { transform: scale(.96); }

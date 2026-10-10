@@ -994,9 +994,14 @@
 
   /* ---------- 후보 ---------- */
   function renderIdeas() {
+    // list: [[이름, '설명'] 또는 [이름, ['가게', …]]] · 가게 이름을 누르면 네이버 지도 검색
+    const ideaList = (L) => `<ul class="idea-list">${L.map(([k, v]) => `<li><b>${esc(k)}</b><span>${Array.isArray(v)
+      ? v.map((n) => `<a href="https://map.naver.com/p/search/${encodeURIComponent(`${n} 제주`)}" target="_blank" rel="noopener">${esc(n)}</a>`).join('')
+      : esc(v)}</span></li>`).join('')}</ul>`;
     const ideaCard = (x) => `<li class="card idea">
-      <div class="row-head"><h3>${esc(x.name)}</h3>${naverSide(x.q || x.name)}</div>
+      <div class="row-head"><h3>${esc(x.name)}</h3>${x.list ? '' : naverSide(x.q || x.name)}</div>
       <p>${esc(x.desc)}</p>
+      ${x.list ? ideaList(x.list) : ''}
       <div class="tags">${(x.tags || []).map((t) => `<span class="tag ${t.kind || ''}">${esc(t.text)}</span>`).join('')}</div>
     </li>`;
     return `<section class="block">
