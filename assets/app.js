@@ -1040,6 +1040,8 @@
     const st = loadPack();
     let moved = false;
     Object.keys(st).forEach((k) => { if (k.includes('::')) { st[k.split('::').pop()] = st[k]; delete st[k]; moved = true; } });
+    // 예전에 줄바꿈 안 되는 공백(\u00A0)이 섞인 채 저장된 체크도 살려 줌
+    Object.keys(st).forEach((k) => { if (k.includes('\u00A0')) { st[k.replace(/\u00A0/g, ' ')] = st[k]; delete st[k]; moved = true; } });
     if (moved) savePack(st);
     return st;
   })();
@@ -1154,8 +1156,10 @@
   view.addEventListener('change', (e) => {
     const box = e.target.closest('input[type="checkbox"][data-key]');
     if (!box) return;
-    if (box.checked) packState[box.dataset.key] = true;
-    else delete packState[box.dataset.key];
+    // esc() 가 ' · ' 를 줄바꿈 안 되는 공백으로 바꿔 넣어서, 저장할 땐 원래 이름으로 되돌림
+    const key = box.dataset.key.replace(/\u00A0/g, ' ');
+    if (box.checked) packState[key] = true;
+    else delete packState[key];
     savePack(packState);
     refreshPackCounts();
   });
