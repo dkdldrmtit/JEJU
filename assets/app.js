@@ -71,7 +71,8 @@
   // 카드 오른쪽에 붙는 작은 지도 단추 (내용이 아래로 밀리지 않게)
   function naverSide(q) {
     if (!q) return '';
-    return `<a class="naver side" href="https://map.naver.com/p/search/${encodeURIComponent(q)}" target="_blank" rel="noopener" aria-label="${esc(q)} 네이버 지도">${ICON.pin}<span>지도</span></a>`;
+    const href = /^https?:\/\//.test(q) ? q : `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
+    return `<a class="naver side" href="${esc(href)}" target="_blank" rel="noopener" aria-label="${esc(/^https?:/.test(q) ? '' : q)} 네이버 지도">${ICON.pin}<span>지도</span></a>`;
   }
 
   function membersOf(who) {

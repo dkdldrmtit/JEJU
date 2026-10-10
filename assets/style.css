@@ -538,6 +538,7 @@ textarea.fb-input { resize: vertical; min-height: 76px; }
 .tag { font-size: .75rem; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: var(--sunken); color: var(--muted); }
 .tag.baby { background: var(--sea-soft); color: var(--sea-ink); }
 .tag.easy { background: var(--tangerine-soft); color: var(--tangerine-ink); }
+.tag.fam { background: #EDE7FF; color: #4A2F93; }
 
 /* ---------- 준비물 ---------- */
 .pack-note { display: flex; gap: 10px; align-items: flex-start; font-size: .875rem; color: var(--muted); }
