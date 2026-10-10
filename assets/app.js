@@ -213,7 +213,7 @@
           ${note ? `<p class="note">${esc(note)}</p>${long ? '<span class="note-more" aria-hidden="true">더보기</span>' : ''}` : ''}
         </div>${it.place ? naverSide(it.place) : ''}</div>
         ${blk || ek ? `<div class="it-acts">${blk ? `<button type="button" class="it-rx" data-blk="${blk}">반응 · 의견<i class="pb-badge" data-blk-badge="${blk}"></i></button>` : ''}${ek ? `<button type="button" class="it-rx it-ed" data-edit-item="${esc(ek)}">✎ 고치기</button>` : ''}</div>` : ''}
-        ${photoOf(it.photo) ? `<figure class="item-photo"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
+        ${photoOf(it.photo) ? `<figure class="item-photo${photoOf(it.photo).diagram ? ' is-diagram' : ''}"><img src="${esc(photoOf(it.photo).src)}" alt="${esc(photoOf(it.photo).alt || it.title)}" loading="lazy"></figure>` : ''}
       </div>
     </li>`;
   }
@@ -554,6 +554,7 @@
   /* 6일 계획표: 가로는 날짜, 세로는 시간 (방학 계획표처럼) */
   const toH = (t) => { const [h, m] = t.split(':').map(Number); return h + (m || 0) / 60; };
 
+  const PL_HOUR = 34; // 시간표 한 시간 높이(px) · style.css 의 --hour 와 같게
   function plannerHTML(st) {
     const P = T.planner;
     const span = P.to - P.from;
@@ -567,8 +568,13 @@
       const blocks = (day.blocks || []).map(([a, b, label, kind, tbd, pk], bk) => {
         const len = toH(b) - toH(a);
         const ph = len >= 1.5 ? photoOf(pk) : null;
-        const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', len < 0.9 ? 'tiny' : '', ph ? 'has-photo' : ''].filter(Boolean).join(' ');
-        return `<button type="button" class="${cls}" data-blk="${i}|${bk}" style="--c:${i};--k:${bk};top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)${ph ? `;--ph:url('${esc(new URL(ph.src, document.baseURI).href)}');--pp:${esc(ph.pos || 'center')}` : ''}" aria-label="${esc(`${mdw(day.date)} ${a}–${b} ${label} 자세히 · 반응 · 의견`)}">${len >= 1.5 && !tbd ? kindIcon(kind) : ''}<b>${esc(label)}</b>${len >= 1.8 && !tbd && kind !== 'rest' ? `<small>${esc(a)}</small>` : ''}<i class="pb-badge" data-blk-badge="${i}|${bk}"></i></button>`;
+        // 칸 높이에 맞춰 글자 줄 수를 정해서 글씨가 칸 밖으로 안 넘치게
+        const icon = len >= 1.5 && !tbd && !ph;
+        const time = len >= 1.8 && !tbd && kind !== 'rest';
+        const room = len * PL_HOUR - 3 - 6 - (icon ? 18 : 0) - (time ? 15 : 0);
+        const lines = Math.max(1, Math.min(3, Math.floor(room / 15)));
+        const cls = ['pb', `k-${kind}`, tbd ? 'tbd' : '', room < 15 ? 'tiny' : '', ph ? 'has-photo' : ''].filter(Boolean).join(' ');
+        return `<button type="button" class="${cls}" data-blk="${i}|${bk}" style="--c:${i};--k:${bk};--ln:${lines};top:calc(${at(toH(a))}% + 1.5px);height:calc(${((len / span) * 100).toFixed(2)}% - 3px)${ph ? `;--ph:url('${esc(new URL(ph.src, document.baseURI).href)}');--pp:${esc(ph.pos || 'center')}` : ''}" aria-label="${esc(`${mdw(day.date)} ${a}–${b} ${label} 자세히 · 반응 · 의견`)}">${icon ? kindIcon(kind) : ''}<b>${esc(label)}</b>${time ? `<small>${esc(a)}</small>` : ''}<i class="pb-badge" data-blk-badge="${i}|${bk}"></i></button>`;
       }).join('');
       let now = '';
       if (isToday) {
@@ -585,8 +591,9 @@
     }).join('');
 
     return `<section class="block">
-      <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">칸을 누르면 자세히 · 반응 · 의견</span></div>
+      <div class="h-row"><h2 class="h">6일 시간표</h2><span class="count">옆으로 밀면 다른 날 · 칸을 누르면 자세히</span></div>
       <div class="card planner-card" data-sky>
+        <div class="planner-wrap" data-pl-wrap>
         <div class="planner" style="--hours:${span}">
           <div class="pl-axis" aria-hidden="true">
             <span class="pl-head"></span>
@@ -595,7 +602,7 @@
           </div>
           ${cols}
         </div>
-
+        </div>
       </div>
     </section>`;
   }
@@ -1328,7 +1335,7 @@
       ${updatesHTML()}
       <section class="block"><h2 class="h">이 사이트는요</h2>
         <div class="card info-card"><ul class="bullets">${T.about.map((a) => `<li>${esc(a)}</li>`).join('')}</ul></div>
-        ${Object.keys(T.photos || {}).length ? `<p class="src">사진 출처 · ${Object.values(T.photos).map((ph) => esc(`${ph.alt} — ${ph.credit}`)).join(' / ')}</p>` : ''}
+        ${Object.keys(T.photos || {}).length ? `<p class="src">사진 출처 · ${Object.values(T.photos).filter((ph) => ph.credit).map((ph) => esc(`${ph.alt} — ${ph.credit}`)).join(' / ')}</p>` : ''}
       </section>`;
   }
 
@@ -1847,6 +1854,17 @@
   const PLANE = '<path d="M21 11.2 13.6 9.4 9.9 3.5H8.1l1.9 5.4-5.2-.6-1.6-2.2H1.9l1 3.9-1 3.9h1.3l1.6-2.2 5.2-.6-1.9 5.4h1.8l3.7-5.9 7.4-1.8a.9.9 0 0 0 0-1.6z"/>';
   let sky = null;
 
+  // 6일 시간표: 여행 중이면 오늘, 아니면 첫날이 맨 왼쪽에 오게
+  function scrollPlanner() {
+    const wrap = view.querySelector('[data-pl-wrap]');
+    if (!wrap || wrap.scrollWidth <= wrap.clientWidth + 2) return;
+    const st = tripState();
+    const i = st.phase === 'during' ? st.index : st.phase === 'after' ? T.days.length - 1 : 0;
+    const col = wrap.querySelectorAll('.pl-col')[i];
+    const axis = wrap.querySelector('.pl-axis');
+    if (col) wrap.scrollLeft = Math.max(0, col.offsetLeft - (axis ? axis.offsetWidth + 4 : 0));
+  }
+
   function buildSky() {
     sky = null;
     const host = view.querySelector('[data-sky]');
@@ -2047,6 +2065,7 @@
         <div class="card g-card">
           <p class="g-flight">${ICON.plane}<span><b>${esc(g.arrive.time)} 도착</b> · ${esc(g.arrive.flight)}</span></p>
           ${stepList(G.arrive)}
+          ${photoOf('pickup') ? `<figure class="g-map"><img src="${esc(photoOf('pickup').src)}" alt="${esc(photoOf('pickup').alt)}" loading="lazy"></figure>` : ''}
           ${G.meet ? `<p class="tip">${esc(G.meet)}</p>` : ''}
           ${routeLink('cju', '제주공항 지도')}
         </div>
@@ -2687,7 +2706,7 @@
     placeBubble();
     fillBlockBadges();
     if (view.querySelector('[data-share]')) loadKakaoShare();
-    requestAnimationFrame(() => { buildSky(); onScroll(); });
+    requestAnimationFrame(() => { buildSky(); onScroll(); scrollPlanner(); });
     askWhoOnce();
   }
 

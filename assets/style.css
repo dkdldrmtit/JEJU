@@ -1559,7 +1559,7 @@ html.calm .plan-panel.slide .day { animation: none; }
 .slot-sug em { font-style: normal; font-size: .72rem; font-weight: 800; color: var(--sea-ink); }
 
 .pl-panel { max-height: 88vh; display: flex; flex-direction: column; }
-.pl-body { overflow-y: auto; -webkit-overflow-scrolling: touch; margin-top: 12px; padding-bottom: 8px; }
+.pl-panel .pl-body { overflow-y: auto; -webkit-overflow-scrolling: touch; margin-top: 12px; padding-bottom: 8px; }
 .pl-search input { font-size: 16px; }
 .pl-hint { margin-top: 8px; font-size: var(--fs-xs); color: var(--muted); }
 .pl-list { display: grid; gap: 8px; margin-top: 12px; }
@@ -1765,3 +1765,35 @@ html.big .pk-q { font-size: .7rem; }
 .ie-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 8px; }
 .ie-row > div { display: grid; gap: 8px; }
 .ie-hint { font-size: .75rem; color: var(--muted); line-height: 1.45; }
+/* 마중 그림 (공항 출구 → P1 주차장) */
+.item-photo.is-diagram, .dayx .item-photo.is-diagram { aspect-ratio: 480 / 400; height: auto; background: none; }
+.item-photo.is-diagram img { object-fit: contain; }
+.g-map { margin: 14px 0 4px; border-radius: 16px; overflow: hidden; }
+.g-map img { display: block; width: 100%; height: auto; }
+
+/* =====================================================================
+   6일 시간표: 옆으로 밀어서 보기 (휴대폰에선 3일 남짓 · 넓은 화면은 6일 다)
+   ===================================================================== */
+.planner-card { padding: 16px 0 14px; }
+.planner-wrap {
+  container-type: inline-size; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  scroll-padding-left: 34px; padding-right: 12px;
+}
+.planner-wrap::-webkit-scrollbar { display: none; }
+.planner {
+  --hour: 34px; --colw: 96px; --colw: calc((100cqw - 34px - 12px) / 3.35);
+  grid-template-columns: 30px repeat(6, var(--colw)); column-gap: 4px; width: max-content;
+}
+@container (min-width: 620px) { .planner { --colw: calc((100cqw - 34px - 12px - 20px) / 6); } }
+.pl-axis { position: sticky; left: 0; z-index: 4; background: var(--surface); border-radius: 0; box-shadow: 4px 0 0 var(--surface), 10px 0 10px -6px rgb(0 0 0 / .1); }
+.pl-col { scroll-snap-align: start; }
+.pb { padding: 3px 5px; font-size: .74rem; line-height: 1.25; }
+button.pb { font-size: .74rem; }
+.pb b { line-height: 15px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--ln, 2); overflow: hidden; max-width: 100%; overflow-wrap: anywhere; }
+.pb.tiny { font-size: .66rem; line-height: 1.1; }
+.pb.tiny b { line-height: 13px; -webkit-line-clamp: 1; white-space: nowrap; text-overflow: ellipsis; display: block; }
+.pb small { font-size: .6rem; }
+@media (max-width: 360px) { .pb, button.pb { font-size: .7rem; } .pb small { display: block; } }
+/* 오른쪽 끝에 '더 있어요' 그림자 */
+.planner-card::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 18px; pointer-events: none; z-index: 5; background: linear-gradient(to left, var(--surface), transparent); border-radius: 0 var(--r-lg, 22px) var(--r-lg, 22px) 0; }
