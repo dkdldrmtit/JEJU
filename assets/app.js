@@ -2692,8 +2692,18 @@
 
   /* ---------- 탭 전환 ---------- */
   const RENDER = { home: renderHome, plan: renderPlan, ideas: renderIdeas, pack: renderPack, info: renderInfo, album: renderAlbum, guide: renderGuide, recap: renderRecap };
+  /* 날짜 바로가기 링크: #1013 또는 #day-2026-10-13 → 일정 탭의 그 날 */
+  const dayFromHash = () => {
+    const h = location.hash.replace('#', '');
+    let iso = null;
+    if (/^day-\d{4}-\d{2}-\d{2}$/.test(h)) iso = h.slice(4);
+    else if (/^\d{4}$/.test(h)) iso = `${T.start.slice(0, 4)}-${h.slice(0, 2)}-${h.slice(2)}`;
+    const k = iso ? T.days.findIndex((d) => d.date === iso) : -1;
+    return k >= 0 ? k : null;
+  };
   const currentTab = () => {
     const h = location.hash.replace('#', '');
+    if (dayFromHash() != null) return 'plan';
     return TABS.includes(h) ? h : 'home';
   };
 
@@ -2721,9 +2731,12 @@
   }
 
   window.addEventListener('hashchange', () => {
-    if (!TABS.includes(location.hash.replace('#', ''))) return; // '#view' 같은 본문 이동 링크는 탭을 바꾸지 않음
+    const dk = dayFromHash();
+    if (!TABS.includes(location.hash.replace('#', '')) && dk == null) return; // '#view' 같은 본문 이동 링크는 탭을 바꾸지 않음
+    if (dk != null) planDay = dk;
     render();
     window.scrollTo(0, 0);
+    if (dk != null) return;
     if (pendingGoto) {
       const el = document.getElementById(pendingGoto);
       pendingGoto = null;
@@ -3296,9 +3309,11 @@
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { /* 지원 안 하는 브라우저: 그냥 온라인으로 */ }); });
   }
 
+  const startDay = dayFromHash();
+  if (startDay != null) planDay = startDay;
   render();
   fillNotice();
-  if (currentTab() === 'plan') scrollToToday();
+  if (currentTab() === 'plan' && startDay == null) scrollToToday();
   loadFeedback();
   loadWeather();
 })();
