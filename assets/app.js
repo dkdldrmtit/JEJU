@@ -243,9 +243,11 @@
       <div class="day-body">
         <p class="dx-date"><b>${md(day.date)}</b> ${wd(day.date)}요일 <span class="dx-n">DAY ${i + 1}</span>${isToday ? '<span class="stub-today">오늘</span>' : ''}</p>
         <h2 class="day-title">${esc(day.title)}</h2>
+        ${day.note ? `<p class="dx-note">${esc(day.note)}</p>` : ''}
         <div class="dx-meta">
           <button type="button" class="day-wx" data-wx-open="${day.date}" data-wx-chip="${day.date}" aria-label="${esc(mdw(day.date))} 자세한 날씨">${wxChipHTML(day.date)}</button>
           ${hasRoute ? `<button class="route-btn" type="button" data-show-day="${i}">${ICON.route}<span>동선 지도</span></button>` : ''}
+          ${T.share && (day.items || []).length ? `<button class="day-share" type="button" data-share="day:${day.date}">${ICON.talk}<span>카톡 공유</span></button>` : ''}
         </div>
         <p class="day-who" aria-label="이날 제주에 있는 사람">${dayWhoHTML(day.date)}</p>
         ${rows.length ? `<ol class="items">${rows.map((it) => { const ek = admin && !it.synthetic ? `${i}:${encodeURIComponent(editKeyOf(it))}` : ''; if (it.slot) return slotRowHTML(it, day, ek); const bk = blockAt(day, it.time); return itemHTML(it, present, bk >= 0 ? `${i}|${bk}` : '', ek); }).join('')}</ol>` : ''}
@@ -923,6 +925,15 @@
       <section class="block"><a class="btn-link" href="#ideas">가볼 곳 · 먹을 곳 후보 보기</a></section>`;
   }
   let planDay = null;
+  // ?d=13 (또는 ?d=2026-10-13) 으로 열면 그날 일정으로 바로 (카톡으로 보낸 '그날 일정' 링크)
+  (() => {
+    const m = location.search.match(/[?&]d=(\d{4}-\d{2}-\d{2}|\d{1,2})(?=&|$)/);
+    if (!m) return;
+    const k = T.days.findIndex((d) => d.date === m[1] || dom(d.date) === Number(m[1]));
+    if (k < 0) return;
+    planDay = k;
+    if (!location.hash || location.hash === '#home') history.replaceState(null, '', `${location.pathname}${location.search}#plan`);
+  })();
   function planTabsHTML(st) {
     return `<nav class="dtabs" role="tablist" aria-label="날짜 고르기">${T.days.map((d, k) => {
       const today = st.phase === 'during' && st.index === k;
@@ -1374,8 +1385,16 @@
 
   async function shareInvite(kind) {
     const base = T.share;
-    const S = kind === 'guide' && T.guideB ? { ...base, ...T.guideB.share } : kind === 'recap' && T.recap ? { ...base, ...T.recap.share } : base;
-    const url = ((T.site && T.site.url) || location.href.split('#')[0]) + (kind === 'guide' ? '#guide' : kind === 'recap' ? '#recap' : '');
+    const site = (T.site && T.site.url) || location.href.split(/[?#]/)[0];
+    const day = /^day:/.test(kind) ? T.days.find((d) => d.date === kind.slice(4)) : null;
+    let S = kind === 'guide' && T.guideB ? { ...base, ...T.guideB.share } : kind === 'recap' && T.recap ? { ...base, ...T.recap.share } : base;
+    let url = site + (kind === 'guide' ? '#guide' : kind === 'recap' ? '#recap' : '');
+    if (day) {
+      // 그날 일정 카드: 시간 · 할 일을 짧게 이어서, 누르면 그날 일정으로 바로
+      const lines = (day.items || []).filter((it) => it.time).map((it) => `${it.time} ${String(it.title).split(' · ')[0].replace(/\s*\(.*?\)/g, '')}`);
+      S = { ...base, title: `${mdw(day.date)} 일정 · ${day.title}`, text: lines.join(' → ').slice(0, 180), button: '일정 보기' };
+      url = `${site}?d=${dom(day.date)}#plan`;
+    }
     const link = { mobileWebUrl: url, webUrl: url };
     // 카카오 개발자 설정에 사이트 도메인이 등록돼 있어야 카톡 카드 링크가 제대로 가요.
     // 등록 전에는(kakaoCard: false) 휴대폰 공유창으로 주소를 그대로 보내요 → 카톡을 고르면 미리보기 그림도 떠요
@@ -2190,7 +2209,8 @@
       }).join('')}`;
   }
   function pollDayHTML(day) {
-    return (T.polls || []).filter((x) => x.day === day.date).map((p) => `<a class="poll-day" href="#ideas" data-goto="polls" data-poll-day="${esc(p.id)}">${p.kind === 'course' ? ICON.route : ICON.meal}<span>${esc(p.short || p.title)} 투표 중</span><em></em></a>`).join('');
+    // 마감된 투표는 그날 일정에서 빼요 (투표 화면엔 결과로 남아요)
+    return (T.polls || []).filter((x) => x.day === day.date && today() <= toDate(x.closes)).map((p) => `<a class="poll-day" href="#ideas" data-goto="polls" data-poll-day="${esc(p.id)}">${p.kind === 'course' ? ICON.route : ICON.meal}<span>${esc(p.short || p.title)} 투표 중</span><em></em></a>`).join('');
   }
   function fillPolls() {
     view.querySelectorAll('[data-polls]').forEach((el) => { el.innerHTML = pollsBodyHTML(); });

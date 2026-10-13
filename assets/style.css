@@ -1805,3 +1805,11 @@ button.pb { font-size: .74rem; }
 .idea-list span { display: flex; flex-wrap: wrap; gap: 6px; color: var(--muted); word-break: keep-all; }
 .idea-list a { padding: 3px 10px; border-radius: 999px; background: var(--sunken); color: var(--ink); font-weight: 700; text-decoration: none; font-size: .8rem; }
 .idea-list a:active { transform: scale(.96); }
+/* 그날 일정 카톡 공유 · 메모 */
+.day-share {
+  appearance: none; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border: 0; border-radius: 999px; background: #FEE500; color: #191600; font-size: .8rem; font-weight: 800;
+}
+.day-share svg { width: 15px; height: 15px; }
+.day-share:active { transform: scale(.96); }
+.dx-note { margin: 2px 0 8px; font-size: var(--fs-sm); color: var(--muted); }
